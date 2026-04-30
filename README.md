@@ -18,9 +18,8 @@ https://TU_USUARIO.github.io/portal-ec-duocuc/
 | Herramienta | Archivo | Descripción |
 |---|---|---|
 | Sistema de Gestión de Asistencia | `SistemaGC.html` | Procesa CSVs de Blackboard y genera archivos GC con % asistencia |
-| Cruzador de Datos | `cruzador_datos.html` | BUSCARV visual entre dos archivos Excel |
+| Cruzador de Datos | `cruzador.html` | BUSCARV visual entre dos archivos Excel |
 | Generador de Declaraciones Juradas | `generador_dj.html` | Extrae datos de PDFs y genera documentos Word |
-| Validador de RUT | `validador_rut_pro.html` | Valida RUTs desde Excel (DV + SII + IA) |
 
 ---
 
@@ -33,7 +32,6 @@ portal-ec-duocuc/
 ├── SistemaGC.html
 ├── cruzador_datos.html
 ├── generador_dj.html
-├── validador_rut_pro.html
 └── README.md
 ```
 
