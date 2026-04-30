@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema GC – Gestión de Asistencia Diplomados</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --azul:#1A3A5C;--azul2:#2E6DA4;--azul3:#E8F1FA;
+  --verde:#2E7D32;--verde2:#E8F5E9;
+  --rojo:#C62828;--rojo2:#FFEBEE;
+  --amari:#F5A800;
+  --g1:#F8F9FA;--g2:#E9ECEF;--g3:#ADB5BD;--g4:#495057;--g5:#212529;
+  --r:10px;--sh:0 2px 12px rgba(0,0,0,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;background:#EEF2F7;color:var(--g5);min-height:100vh}
+
+/* TOPBAR */
+.tb{background:var(--azul);display:flex;align-items:center;justify-content:space-between;
+    padding:0 28px;height:56px;position:sticky;top:0;z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.tb-l{display:flex;align-items:center;gap:14px}
+.tb-div{width:1px;height:22px;background:rgba(255,255,255,.2)}
+.tb-title{color:#fff;font-size:14px;font-weight:600}
+.tb-badge{background:var(--amari);color:var(--azul);font-size:11px;font-weight:700;
+          padding:3px 10px;border-radius:20px;letter-spacing:.04em}
+.tb-btn{background:transparent;border:1px solid rgba(255,255,255,.3);color:#fff;
+        font-family:inherit;font-size:12px;padding:5px 14px;border-radius:6px;cursor:pointer}
+.tb-btn:hover{background:rgba(255,255,255,.12)}
+
+/* LAYOUT */
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 100px}
+
+/* STEPS */
+.steps{display:flex;align-items:center;margin-bottom:32px}
+.si{display:flex;align-items:center;flex:1}
+.sc{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;
+    border:2.5px solid var(--g3);background:#fff;color:var(--g3);transition:all .3s}
+.sc.act{border-color:var(--azul2);background:var(--azul2);color:#fff}
+.sc.don{border-color:var(--verde);background:var(--verde);color:#fff}
+.sl{font-size:12px;font-weight:600;color:var(--g3);margin-left:8px;
+    white-space:nowrap;transition:color .3s}
+.sl.act{color:var(--azul2)}.sl.don{color:var(--verde)}
+.sln{flex:1;height:2px;background:var(--g2);margin:0 8px;transition:background .3s}
+.sln.don{background:var(--verde)}
+
+/* CARD */
+.card{background:#fff;border-radius:var(--r);border:1px solid var(--g2);
+      padding:24px 28px;margin-bottom:20px;box-shadow:var(--sh)}
+.card-t{font-size:16px;font-weight:700;color:var(--azul);margin-bottom:4px}
+.card-s{font-size:13px;color:var(--g4);margin-bottom:20px;line-height:1.55}
+
+/* DROP */
+.drop{border:2px dashed var(--g3);border-radius:var(--r);padding:24px;
+      text-align:center;cursor:pointer;transition:all .2s;
+      position:relative;background:var(--g1)}
+.drop:hover,.drop.ov{border-color:var(--azul2);background:var(--azul3)}
+.drop.ok{border-color:var(--verde);border-style:solid;background:var(--verde2)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-ico{font-size:32px;display:block;margin-bottom:6px}
+.drop-lbl{font-size:13px;font-weight:600;color:var(--g4)}
+.drop-hint{font-size:11px;color:var(--g3);margin-top:3px}
+.drop-fname{font-size:12px;color:var(--verde);font-weight:600;margin-top:6px;word-break:break-all}
+
+/* BOTONES */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+     padding:10px 22px;border-radius:8px;border:none;font-family:inherit;
+     font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-p{background:var(--azul2);color:#fff}
+.btn-p:hover:not(:disabled){background:#1d5289;transform:translateY(-1px);
+  box-shadow:0 4px 16px rgba(46,109,164,.35)}
+.btn-s{background:var(--verde);color:#fff}
+.btn-s:hover:not(:disabled){background:#1b5e20;transform:translateY(-1px)}
+.btn-o{background:#fff;color:var(--azul2);border:2px solid var(--azul2)}
+.btn-o:hover{background:var(--azul3)}
+.btn:disabled{background:var(--g3)!important;border-color:var(--g3)!important;
+              color:#fff!important;cursor:not-allowed!important;transform:none!important}
+.btn-lg{padding:13px 30px;font-size:15px}
+.brow{display:flex;gap:12px;align-items:center;margin-top:22px;flex-wrap:wrap}
+
+/* ALERTS */
+.al{padding:11px 16px;border-radius:8px;font-size:13px;
+    display:flex;gap:10px;align-items:flex-start;line-height:1.5;margin-top:10px}
+.al-ok{background:var(--verde2);color:var(--verde);border:1px solid #A5D6A7}
+.al-er{background:var(--rojo2);color:var(--rojo);border:1px solid #EF9A9A}
+.al-wa{background:#FFF8E1;color:#E65100;border:1px solid #FFE082}
+.al-in{background:var(--azul3);color:var(--azul);border:1px solid #90CAF9}
+.al-ico{font-size:15px;flex-shrink:0;margin-top:1px}
+
+/* MOD TABS */
+.mtabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.mt{padding:8px 18px;border:2px solid var(--g2);border-radius:8px;background:#fff;
+    font-size:13px;font-weight:600;color:var(--g3);cursor:pointer;
+    transition:all .15s;position:relative}
+.mt:hover{border-color:var(--azul2);color:var(--azul2)}
+.mt.act{border-color:var(--azul2);color:var(--azul2);background:var(--azul3)}
+.mt.load{border-color:var(--verde);color:var(--verde)}
+.mt.load.act{background:var(--verde2)}
+.mt.load::after{content:'✓';position:absolute;top:-6px;right:-6px;
+  width:16px;height:16px;background:var(--verde);color:#fff;
+  border-radius:50%;font-size:9px;display:flex;align-items:center;
+  justify-content:center;font-weight:800}
+
+/* CHIPS */
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;
+      border-radius:20px;font-size:12px;font-weight:600;
+      background:var(--g2);color:var(--g4)}
+.chip.ok{background:var(--verde2);color:var(--verde)}
+
+/* PROGRESO */
+.pgbar{height:4px;background:var(--g2);border-radius:2px;margin-top:8px;overflow:hidden}
+.pgfill{height:100%;background:var(--azul2);border-radius:2px;
+        transition:width .6s ease;width:0}
+
+/* LOG */
+.log-w{margin-top:16px}
+.log-h{background:var(--azul);border-radius:var(--r) var(--r) 0 0;
+       padding:9px 18px;font-size:11px;font-weight:700;
+       color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.06em;
+       display:flex;justify-content:space-between;align-items:center}
+.log-clr{cursor:pointer;color:rgba(255,255,255,.4);font-size:11px;font-weight:400}
+.log-clr:hover{color:#fff}
+.log-b{background:#0D1117;border-radius:0 0 var(--r) var(--r);
+       padding:14px 18px;font-family:'Consolas','Courier New',monospace;
+       font-size:11.5px;line-height:1.85;max-height:240px;
+       overflow-y:auto;border:1px solid rgba(255,255,255,.05)}
+.lok{color:#56D364}.ler{color:#F85149}.lwa{color:#E3B341}
+.lin{color:#58A6FF}.ldm{color:#484F58}.lhl{color:#FFA657}
+
+/* STATS */
+.stat-g{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.stat{background:#fff;border:1px solid var(--g2);border-radius:var(--r);
+      padding:14px;text-align:center;box-shadow:var(--sh)}
+.stat-n{font-size:26px;font-weight:800;color:var(--azul);line-height:1}
+.stat-l{font-size:10px;color:var(--g3);margin-top:4px;font-weight:700;
+        text-transform:uppercase;letter-spacing:.05em}
+.stat.ok .stat-n{color:var(--verde)}.stat.wa .stat-n{color:#E65100}
+
+/* TABLA */
+.tbl-w{background:#fff;border-radius:var(--r);border:1px solid var(--g2);
+       overflow:hidden;box-shadow:var(--sh)}
+.tbl-sc{overflow-x:auto;max-height:360px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--azul);color:#fff;
+   padding:9px 12px;text-align:left;font-size:10.5px;font-weight:700;
+   letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;z-index:1}
+td{padding:7px 12px;border-bottom:1px solid var(--g2);color:var(--g4);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--g1)}
+.rb{display:inline-block;width:24px;height:24px;border-radius:50%;
+    font-weight:700;font-size:11px;text-align:center;line-height:24px}
+.r0{background:var(--g2);color:var(--g3)}.r1{background:#FFF3E0;color:#E65100}
+.r2{background:#E3F2FD;color:#1565C0}.r3{background:var(--verde2);color:var(--verde)}
+
+/* SECCIONES */
+.paso{display:none}
+.paso.act{display:block;animation:fi .2s ease}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* MODAL */
+.mov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;
+     display:none;align-items:center;justify-content:center;padding:20px}
+.mov.open{display:flex}
+.modal{background:#fff;border-radius:14px;max-width:580px;width:100%;
+       max-height:80vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.2)}
+.mh{padding:18px 24px;border-bottom:1px solid var(--g2);
+    display:flex;justify-content:space-between;align-items:center}
+.mh h3{font-size:15px;color:var(--azul);font-weight:700}
+.mx{cursor:pointer;font-size:20px;color:var(--g3);line-height:1}
+.mx:hover{color:var(--g5)}
+.mb{padding:18px 24px}
+.hs{display:flex;gap:12px;margin-bottom:14px}
+.hn{width:26px;height:26px;border-radius:50%;background:var(--azul2);color:#fff;
+    font-weight:700;font-size:12px;display:flex;align-items:center;
+    justify-content:center;flex-shrink:0;margin-top:2px}
+.ht strong{display:block;font-size:13px;margin-bottom:2px;color:var(--azul)}
+.ht span{font-size:12px;color:var(--g4);line-height:1.5}
+
+@media(max-width:660px){
+  .stat-g{grid-template-columns:1fr 1fr}
+  .steps .sl{display:none}
+  .brow{flex-direction:column;align-items:stretch}
+}
+
+/* FOOTER */
+.footer{position:fixed;bottom:0;left:0;right:0;background:rgba(26,58,92,.97);
+  backdrop-filter:blur(6px);border-top:2px solid var(--amari);padding:8px 28px;
+  display:flex;align-items:center;justify-content:space-between;z-index:50}
+.footer-logo{font-family:Arial;font-weight:900;font-size:13px}
+.footer-logo span:first-child{color:var(--amari)}
+.footer-logo span:last-child{color:#fff}
+.footer-sep{width:1px;height:14px;background:rgba(255,255,255,.2);margin:0 10px}
+.footer-text{font-size:11px;color:rgba(255,255,255,.55)}
+.footer-right{font-size:11px;color:rgba(255,255,255,.4)}
+
+/* SELECTOR MÓDULOS */
+.mod-sel{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.mod-btn{
+  width:52px;height:52px;border-radius:12px;border:2.5px solid var(--g2);
+  background:#fff;font-family:inherit;font-size:15px;font-weight:700;
+  color:var(--g3);cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;
+}
+.mod-btn:hover{border-color:var(--azul2);color:var(--azul2);background:var(--azul3)}
+.mod-btn.sel{
+  border-color:var(--azul2);background:var(--azul2);color:#fff;
+  box-shadow:0 4px 12px rgba(46,109,164,.3);transform:translateY(-2px);
+}
+.mod-hint{font-size:11.5px;color:var(--g3);margin-top:6px}
+
+.disabled-tab{opacity:.45;border-style:dashed!important}
+.disabled-tab:hover{border-color:var(--g3)!important;color:var(--g3)!important;background:#fff!important}
+.chip-disabled{background:var(--g2);color:var(--g3);opacity:.6;font-style:italic}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <div class="tb-l">
+    <svg width="88" height="26" viewBox="0 0 88 26">
+      <text x="0" y="20" font-family="Arial" font-weight="900" font-size="20" fill="#F5A800">Duoc</text>
+      <text x="52" y="20" font-family="Arial" font-weight="900" font-size="20" fill="white">UC</text>
+    </svg>
+    <div class="tb-div"></div>
+    <span class="tb-title">Sistema de Gestión de Asistencia – Diplomados</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="tb-badge">EDUCACIÓN CONTINUA</span>
+    <button class="tb-btn" onclick="document.getElementById('may').classList.add('open')">❓ Ayuda</button>
+  </div>
+</div>
+
+<!-- MODAL AYUDA -->
+<div class="mov" id="may">
+  <div class="modal">
+    <div class="mh">
+      <h3>¿Cómo usar el sistema?</h3>
+      <span class="mx" onclick="document.getElementById('may').classList.remove('open')">✕</span>
+    </div>
+    <div class="mb">
+      <div class="hs"><div class="hn">1</div><div class="ht">
+        <strong>Sube el archivo GC base</strong>
+        <span>El archivo .xlsm con PARTICIPANTES y CRONOGRAMA ya completados. Sin hojas Carga.</span>
+      </div></div>
+      <div class="hs"><div class="hn">2</div><div class="ht">
+        <strong>Verifica los datos base</strong>
+        <span>El sistema lee automáticamente los participantes y las fechas del cronograma.</span>
+      </div></div>
+      <div class="hs"><div class="hn">3</div><div class="ht">
+        <strong>Carga los CSV de Blackboard</strong>
+        <span>Un CSV por módulo. Puede tener registros de múltiples sesiones juntos.</span>
+      </div></div>
+      <div class="hs"><div class="hn">4</div><div class="ht">
+        <strong>Descarga el Excel actualizado</strong>
+        <span>Los rangos se escriben directamente en las celdas. No hay fórmulas intermedias.</span>
+      </div></div>
+      <div class="al al-in" style="margin-top:6px">
+        <span class="al-ico">ℹ</span>
+        <span><strong>Regla:</strong> 0–60 min = rango 1 · 61–120 min = rango 2 · más de 120 min = rango 3</span>
+      </div>
+      <div class="al al-wa" style="margin-top:8px">
+        <span class="al-ico">⚠</span>
+        <span>El CSV puede incluir varias sesiones juntas. El sistema detecta automáticamente el formato de fecha (DD-MM o MM-DD) comparando contra el cronograma.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- WIZARD -->
+  <div class="steps">
+    <div class="si"><div class="sc act" id="sc1">1</div><span class="sl act" id="sl1">Archivo GC</span></div>
+    <div class="sln" id="ln1"></div>
+    <div class="si"><div class="sc" id="sc2">2</div><span class="sl" id="sl2">Datos base</span></div>
+    <div class="sln" id="ln2"></div>
+    <div class="si"><div class="sc" id="sc3">3</div><span class="sl" id="sl3">Blackboard</span></div>
+    <div class="sln" id="ln3"></div>
+    <div class="si"><div class="sc" id="sc4">4</div><span class="sl" id="sl4">Resultado</span></div>
+  </div>
+
+  <!-- P1: GC -->
+  <div class="paso act" id="p1">
+    <div class="card">
+      <div class="card-t">🗂 ¿Cuántos módulos tiene este diplomado?</div>
+      <div class="card-s">Selecciona el número de módulos. El sistema mostrará solo las opciones correspondientes.</div>
+      <div class="mod-sel" id="modSelBtns">
+        <button class="mod-btn" data-n="4" onclick="selNumMods(4,this)">4</button>
+        <button class="mod-btn" data-n="5" onclick="selNumMods(5,this)">5</button>
+        <button class="mod-btn" data-n="6" onclick="selNumMods(6,this)">6</button>
+        <button class="mod-btn sel" data-n="7" onclick="selNumMods(7,this)">7</button>
+      </div>
+      <div class="mod-hint" id="modSelHint">Mostrando M1 – M7 · Cambia si tu diplomado tiene menos módulos</div>
+    </div>
+    <div class="card">
+      <div class="card-t">📊 Archivo GC del Diplomado</div>
+      <div class="card-s">Sube el Excel base (.xlsm) con PARTICIPANTES y CRONOGRAMA completados.</div>
+      <div class="drop" id="dGC">
+        <input type="file" id="iGC" accept=".xlsm,.xlsx">
+        <span class="drop-ico">📂</span>
+        <div class="drop-lbl">Arrastra el archivo GC aquí o haz clic</div>
+        <div class="drop-hint">.xlsm o .xlsx</div>
+        <div class="drop-fname" id="nGC"></div>
+      </div>
+      <div class="pgbar"><div class="pgfill" id="pgGC"></div></div>
+      <div id="gcAl"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-p btn-lg" id="b2" disabled onclick="irPaso(2)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- P2: BASE -->
+  <div class="paso" id="p2">
+    <div class="card">
+      <div class="card-t">👥 Participantes</div>
+      <div class="card-s" id="pSub">Leyendo…</div>
+      <div id="pSt"></div>
+    </div>
+    <div class="card">
+      <div class="card-t">📅 Cronograma de fechas</div>
+      <div class="card-s" id="cSub">Leyendo…</div>
+      <div id="cSt"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o" onclick="irPaso(1)">← Volver</button>
+      <button class="btn btn-p btn-lg" id="b3" onclick="irPaso(3)">Continuar →</button>
+    </div>
+  </div>
+
+  <!-- P3: BLACKBOARD -->
+  <div class="paso" id="p3">
+    <div class="card">
+      <div class="card-t">📋 Reportes de Blackboard</div>
+      <div class="card-s">Carga el CSV por módulo. Puede contener registros de múltiples sesiones.</div>
+      <div class="mtabs" id="modTabs"></div>
+      <div id="modPanels"></div>
+      <div class="chips" id="chipsWrap"></div>
+    </div>
+    <div class="log-w" id="logSec" style="display:none">
+      <div class="log-h">Registro de validación
+        <span class="log-clr" onclick="document.getElementById('lb1').innerHTML=''">Limpiar</span>
+      </div>
+      <div class="log-b" id="lb1"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o" onclick="irPaso(2)">← Volver</button>
+      <button class="btn btn-p btn-lg" id="bPro" onclick="procesar()" disabled>⚡ Procesar y generar Excel</button>
+    </div>
+  </div>
+
+  <!-- P4: RESULTADO -->
+  <div class="paso" id="p4">
+    <div class="stat-g" id="sGrid"></div>
+    <div class="card">
+      <div class="card-t">📊 Detalle por módulo</div>
+      <div class="mtabs" id="resTabs"></div>
+      <div id="resCont"></div>
+    </div>
+    <div class="log-w">
+      <div class="log-h">Registro completo
+        <span class="log-clr" onclick="document.getElementById('lb2').innerHTML=''">Limpiar</span>
+      </div>
+      <div class="log-b" id="lb2"></div>
+    </div>
+    <div class="brow">
+      <button class="btn btn-o" onclick="irPaso(3)">← Volver</button>
+      <button class="btn btn-s btn-lg" id="bDl" onclick="descargar()" disabled>⬇ Descargar Excel actualizado</button>
+      <button class="btn btn-o" onclick="reiniciar()">🔄 Nuevo proceso</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════════════════
+const S = {
+  gcFile:null, gcZip:null, sheetPaths:{}, ss:[],
+  partes:[],      // [{rut, nombre, row}]
+  cronograma:{},  // {M1:[{col,key,fecha}], ...}
+  csvData:{},     // {M1:[{rut,key,min,rango}], ...}
+  resultBlob:null,
+  resultData:{},
+  modulosActivos:[],
+  numModulos:7   // {M1:[{rut,nombre,sesiones:{key:rango},pct}], ...}
+};
+
+// Config módulos: fechaRow=fila de fechas header, dataRow=primera fila de datos
+// cronoRows=filas en CRONOGRAMA col A
+const MOD = {
+  M1:{fr:5, dr:6,  cr:[14,15,16,17,18,19,20,21,22,23]},
+  M2:{fr:5, dr:6,  cr:[30,31,32,33,34,35,36,37,38,39]},
+  M3:{fr:12,dr:13, cr:[46,47,48,49,50,51,52,53,54,55]},
+  M4:{fr:12,dr:13, cr:[62,63,64,65,66,67,68,69,70,71]},
+  M5:{fr:5, dr:6,  cr:[78,79,80,81,82,83,84,85,86,87]},
+  M6:{fr:5, dr:6,  cr:[94,95,96,97,98,99,100,101,102,103]},
+  M7:{fr:5, dr:6,  cr:[110,111,112,113,114,115,116,117,118,119]},
+};
+const COL_N=14; // columna % asistencia
+const MESES={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,
+             julio:6,agosto:7,septiembre:8,octubre:9,noviembre:10,diciembre:11};
+
+// ════════════════════════════════════════════════════════
+// HELPERS FECHAS
+// ════════════════════════════════════════════════════════
+function fk(d){
+  // Date → 'YYYY-MM-DD'
+  if(!d||isNaN(d.getTime())) return '';
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function fkDisplay(k){
+  // 'YYYY-MM-DD' → 'DD-MM'
+  if(!k||k.length<10) return k;
+  return k.slice(8,10)+'-'+k.slice(5,7);
+}
+function serial2date(n){
+  // Excel serial → Date
+  const d=new Date((n-25569)*86400*1000);
+  return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+}
+function parseFechaBase(a,b,c){
+  // a=día o mes, b=mes o día, c=año → retorna ambas interpretaciones
+  const d1=new Date(+c,+a-1,+b); // MM-DD
+  const d2=new Date(+c,+b-1,+a); // DD-MM
+  return {mmdd:d1,ddmm:d2};
+}
+function parseFecha(txt){
+  // Retorna {mmdd,ddmm} para formatos ambiguos, o {uniq} para no ambiguos
+  if(!txt) return null;
+  txt=String(txt).trim();
+
+  // YYYY-MM-DD (no ambiguo)
+  const iso=txt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso) return {uniq:new Date(+iso[1],+iso[2]-1,+iso[3])};
+
+  // "jueves, 28 de agosto de 2025" (no ambiguo)
+  const esp=txt.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
+  if(esp&&MESES[esp[2].toLowerCase()]!==undefined)
+    return {uniq:new Date(+esp[3],MESES[esp[2].toLowerCase()],+esp[1])};
+
+  // DD/MM/YYYY o MM/DD/YYYY
+  const sl=txt.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(sl){
+    if(+sl[1]>12) return {uniq:new Date(+sl[3],+sl[2]-1,+sl[1])}; // día>12 → inequívoco DD/MM
+    if(+sl[2]>12) return {uniq:new Date(+sl[3],+sl[1]-1,+sl[2])}; // mes>12 → inequívoco MM/DD
+    return parseFechaBase(sl[1],sl[2],sl[3]);
+  }
+
+  // DD-MM-YYYY o MM-DD-YYYY
+  const gu=txt.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+  if(gu){
+    if(+gu[1]>12) return {uniq:new Date(+gu[3],+gu[2]-1,+gu[1])};
+    if(+gu[2]>12) return {uniq:new Date(+gu[3],+gu[1]-1,+gu[2])};
+    return parseFechaBase(gu[1],gu[2],gu[3]);
+  }
+
+  return null;
+}
+
+// ════════════════════════════════════════════════════════
+// HELPERS GENERALES
+// ════════════════════════════════════════════════════════
+function colLetter(n){
+  let s='';
+  while(n>0){ n--; s=String.fromCharCode(65+n%26)+s; n=Math.floor(n/26); }
+  return s;
+}
+function normRut(v){
+  let s=String(v||'').trim().toLowerCase();
+  s=s.replace(/\./g,'').replace(/-/g,'').replace(/\s/g,'');
+  if(s.startsWith('ec')) s=s.slice(2);
+  return s;
+}
+function toMin(txt){
+  if(!txt) return 0; txt=String(txt).trim();
+  const m=txt.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
+  if(m) return parseInt(m[1])*60+parseInt(m[2]);
+  if(/^\d*\.\d+$/.test(txt)) return Math.floor(parseFloat(txt)*1440);
+  return 0;
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ════════════════════════════════════════════════════════
+// LOG
+// ════════════════════════════════════════════════════════
+function log(msg,cls='lin'){
+  ['lb1','lb2'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    const d=document.createElement('div'); d.className=cls; d.textContent=msg;
+    el.appendChild(d); el.scrollTop=el.scrollHeight;
+  });
+  document.getElementById('logSec').style.display='block';
+}
+
+// ════════════════════════════════════════════════════════
+// WIZARD
+// ════════════════════════════════════════════════════════
+function irPaso(n){
+  [1,2,3,4].forEach(i=>{
+    document.getElementById(`p${i}`).classList.remove('act');
+    const sc=document.getElementById(`sc${i}`), sl=document.getElementById(`sl${i}`);
+    if(i<n){ sc.className='sc don'; sl.className='sl don'; }
+    else if(i===n){ sc.className='sc act'; sl.className='sl act'; }
+    else{ sc.className='sc'; sl.className='sl'; }
+    const ln=document.getElementById(`ln${i}`);
+    if(ln){ if(i<n) ln.classList.add('don'); else ln.classList.remove('don'); }
+  });
+  document.getElementById(`p${n}`).classList.add('act');
+  if(n===2) leerBase();
+  if(n===4) mostrarResultado();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ════════════════════════════════════════════════════════
+// ZIP / XML
+// ════════════════════════════════════════════════════════
+async function mapearHojas(){
+  const wbX=await S.gcZip.file('xl/workbook.xml').async('text');
+  const rlX=await S.gcZip.file('xl/_rels/workbook.xml.rels').async('text');
+  const rels={};
+  [...rlX.matchAll(/Id="([^"]+)"[^>]*Target="([^"]+)"/g)].forEach(m=>rels[m[1]]=m[2]);
+  S.sheetPaths={};
+  [...wbX.matchAll(/name="([^"]+)"[^>]*r:id="([^"]+)"/g)].forEach(m=>{
+    const[,name,rid]=m; if(!rels[rid]) return;
+    let t=rels[rid]; if(!t.startsWith('xl/')) t='xl/'+t;
+    S.sheetPaths[name]=t;
+  });
+}
+async function leerSS(){
+  const f=S.gcZip.file('xl/sharedStrings.xml'); if(!f){S.ss=[];return;}
+  const x=await f.async('text'); S.ss=[];
+  [...x.matchAll(/<si>([\s\S]*?)<\/si>/g)].forEach(m=>
+    S.ss.push(m[1].replace(/<[^>]+>/g,'')
+      .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+      .replace(/&quot;/g,'"').replace(/&#xD;/g,'').trim()));
+}
+function getCellVal(tag){
+  const t=(tag.match(/\bt="([^"]+)"/)??[])[1]??'n';
+  const v=(tag.match(/<v>([^<]*)<\/v>/)??[])[1]??'';
+  if(t==='s') return S.ss[parseInt(v)]??'';
+  if(t==='n'||t===''){const n=parseFloat(v);return isNaN(n)?v:n;}
+  return v;
+}
+async function leerFilaWs(wsXml,rowNum){
+  const pat=new RegExp(`<row\\b[^>]*r="${rowNum}"[^>]*>([\\s\\S]*?)<\\/row>`);
+  const m=wsXml.match(pat); if(!m) return {};
+  const cells={};
+  [...m[1].matchAll(/<c r="([A-Z]+)\d+"([^>]*)>([\s\S]*?)<\/c>/g)].forEach(cm=>{
+    cells[cm[1]]=getCellVal(`<c${cm[2]}>${cm[3]}</c>`);
+  });
+  // también self-closing
+  [...m[1].matchAll(/<c r="([A-Z]+)\d+"([^>]*)\/>/g)].forEach(cm=>{
+    if(!(cm[1] in cells)) cells[cm[1]]=null;
+  });
+  return cells;
+}
+async function leerWs(nombre){
+  const p=S.sheetPaths[nombre]; if(!p||!S.gcZip.file(p)) return null;
+  return await S.gcZip.file(p).async('text');
+}
+
+// ════════════════════════════════════════════════════════
+// ESCRITURA DIRECTA EN XML — maneja self-closing correctamente
+// ════════════════════════════════════════════════════════
+function escribirCelda(wsXml, cellRef, sVal, valor, formula=''){
+  const search = `<c r="${cellRef}"`;
+  const cStart = wsXml.indexOf(search);
+
+  if(cStart !== -1){
+    // Encontrar el fin de la celda (self-closing o con contenido)
+    const gt = wsXml.indexOf('>', cStart);
+    const isSC = wsXml[gt-1] === '/';
+    const cEnd = isSC ? gt+1 : wsXml.indexOf('</c>', cStart)+4;
+
+    // Obtener estilo de la celda original si no se pasó uno explícito
+    if(!sVal){
+      const oldCell = wsXml.slice(cStart, cEnd);
+      const sm = oldCell.match(/\bs="(\d+)"/);
+      sVal = sm ? sm[1] : '0';
+    }
+
+    const newCell = `<c r="${cellRef}" s="${sVal}" t="n">${formula}<v>${valor}</v></c>`;
+    return wsXml.slice(0,cStart) + newCell + wsXml.slice(cEnd);
+  }
+
+  // Celda no existe → insertar en la fila
+  let pos=0;
+  while(true){
+    const ri=wsXml.indexOf('<row',pos); if(ri===-1) break;
+    const gt=wsXml.indexOf('>',ri);
+    const rAttr=wsXml.slice(ri,gt+1);
+    const rn=rAttr.match(/\br="(\d+)"/);
+    if(rn){
+      const rowNum=parseInt(rn[1]);
+      const refNum=parseInt(cellRef.replace(/[A-Z]+/,''));
+      if(rowNum===refNum){
+        const rc=wsXml.indexOf('</row>',ri);
+        const nc=`<c r="${cellRef}" s="${sVal||'0'}" t="n">${formula}<v>${valor}</v></c>`;
+        return wsXml.slice(0,rc)+nc+wsXml.slice(rc);
+      }
+    }
+    pos=gt+1;
+  }
+  return wsXml;
+}
+
+function getEstiloCelda(wsXml, cellRef){
+  const search=`<c r="${cellRef}"`;
+  const idx=wsXml.indexOf(search); if(idx===-1) return '0';
+  const gt=wsXml.indexOf('>',idx);
+  const tag=wsXml.slice(idx,gt+1);
+  const m=tag.match(/\bs="(\d+)"/);
+  return m?m[1]:'0';
+}
+
+function getFórmulaCelda(wsXml, cellRef){
+  const search=`<c r="${cellRef}"`;
+  const cStart=wsXml.indexOf(search); if(cStart===-1) return '';
+  const gt=wsXml.indexOf('>',cStart);
+  const isSC=wsXml[gt-1]==='/'; if(isSC) return '';
+  const cEnd=wsXml.indexOf('</c>',cStart)+4;
+  const cell=wsXml.slice(cStart,cEnd);
+  const fs=cell.indexOf('<f'); const fe=cell.indexOf('</f>');
+  return (fs!==-1&&fe!==-1)?cell.slice(fs,fe+4):'';
+}
+
+// ════════════════════════════════════════════════════════
+// PARSEAR CSV CON AUTO-DETECCIÓN DE FORMATO DE FECHA
+// ════════════════════════════════════════════════════════
+function parsearCSV(txt, cronoKeys){
+  const lines=txt.split('\n').map(l=>l.replace(/\r/,'')).filter(l=>l.trim());
+  if(lines.length<2) return null;
+
+  const sep=lines[0].includes(';')?';':',';
+  const hdr=lines[0].replace(/^\uFEFF/,'').split(sep).map(h=>h.replace(/"/g,'').toLowerCase().trim());
+  const iU=hdr.findIndex(h=>h==='username');
+  const iF=hdr.findIndex(h=>h.includes('first')&&h.includes('join'));
+  const iT=hdr.findIndex(h=>h.includes('total')&&h.includes('time'));
+  if(iU<0||iF<0||iT<0) return null;
+
+  function split(l){
+    const r=[]; let c='',q=false;
+    for(const ch of l){ if(ch==='"'){q=!q;}else if(ch===sep&&!q){r.push(c.trim());c='';}else c+=ch; }
+    r.push(c.trim()); return r;
+  }
+
+  // Paso 1: parsear todas las filas con ambas interpretaciones
+  const rawRows=[];
+  for(let i=1;i<lines.length;i++){
+    const cols=split(lines[i]);
+    const user=(cols[iU]||'').replace(/"/g,'').trim(); if(!user) continue;
+    const rut=normRut(user); if(!rut) continue;
+    const fj=(cols[iF]||'').replace(/"/g,'').trim();
+    const tt=(cols[iT]||'').replace(/"/g,'').trim();
+    const fp=parseFecha(fj); if(!fp) continue;
+    const min=toMin(tt);
+    rawRows.push({rut,fj,fp,min});
+  }
+  if(!rawRows.length) return [];
+
+  // Paso 2: auto-detectar formato comparando contra CRONOGRAMA
+  let usarDDMM=false;
+  if(cronoKeys&&cronoKeys.size>0){
+    let matchMMDD=0, matchDDMM=0;
+    rawRows.forEach(r=>{
+      if(r.fp.uniq){
+        if(cronoKeys.has(fk(r.fp.uniq))) matchMMDD++; // único → cuenta igual para ambos
+        if(cronoKeys.has(fk(r.fp.uniq))) matchDDMM++;
+      } else {
+        if(r.fp.mmdd&&cronoKeys.has(fk(r.fp.mmdd))) matchMMDD++;
+        if(r.fp.ddmm&&cronoKeys.has(fk(r.fp.ddmm))) matchDDMM++;
+      }
+    });
+    if(matchDDMM>matchMMDD){
+      usarDDMM=true;
+      console.log(`Auto-detección DD-MM: ${matchDDMM} vs ${matchMMDD} matches`);
+    } else {
+      console.log(`Auto-detección MM-DD: ${matchMMDD} vs ${matchDDMM} matches`);
+    }
+  }
+
+  // Paso 3: construir rows con la fecha correcta
+  const rows=[];
+  rawRows.forEach(r=>{
+    let fecha;
+    if(r.fp.uniq){ fecha=r.fp.uniq; }
+    else if(usarDDMM){ fecha=r.fp.ddmm; }
+    else { fecha=r.fp.mmdd; }
+    if(!fecha) return;
+    const key=fk(fecha);
+    const rango=r.min<=60?1:r.min<=120?2:3;
+    rows.push({rut:r.rut, key, min:r.min, rango});
+  });
+
+  // Agrupar por rut+fecha → máximo rango (si hay duplicados)
+  const mapa={};
+  rows.forEach(r=>{
+    const k=`${r.rut}|${r.key}`;
+    if(!mapa[k]||r.rango>mapa[k].rango) mapa[k]=r;
+  });
+  return Object.values(mapa);
+}
+
+// ════════════════════════════════════════════════════════
+// DROP SETUP
+// ════════════════════════════════════════════════════════
+function setupDrop(boxId,inpId,cb){
+  const box=document.getElementById(boxId), inp=document.getElementById(inpId);
+  if(!box||!inp){ console.warn('setupDrop: no encontró',boxId,inpId); return; }
+
+  // Click explícito — funciona tanto en HTML estático como en elementos dinámicos
+  box.addEventListener('click', e=>{
+    if(e.target!==inp) inp.click();  // evitar doble disparo si el clic fue sobre el input
+  });
+  inp.addEventListener('change',e=>{
+    if(e.target.files&&e.target.files[0]) cb(e.target.files[0]);
+  });
+  box.addEventListener('dragover', e=>{e.preventDefault(); box.classList.add('ov');});
+  box.addEventListener('dragleave',()=>box.classList.remove('ov'));
+  box.addEventListener('drop',e=>{
+    e.preventDefault();
+    box.classList.remove('ov');
+    if(e.dataTransfer.files&&e.dataTransfer.files[0]) cb(e.dataTransfer.files[0]);
+  });
+}
+
+// GC
+setupDrop('dGC','iGC', async file=>{
+  S.gcFile=file;
+  document.getElementById('nGC').textContent=file.name;
+  document.getElementById('dGC').classList.add('ok');
+  const pg=document.getElementById('pgGC');
+  pg.style.transition='width .6s'; setTimeout(()=>pg.style.width='70%',50);
+
+  try{
+    const buf=await file.arrayBuffer();
+    S.gcZip=await JSZip.loadAsync(buf);
+    await mapearHojas();
+    await leerSS();
+    pg.style.width='100%';
+    const hojas=Object.keys(S.sheetPaths);
+    document.getElementById('gcAl').innerHTML=`
+      <div class="al al-ok"><span class="al-ico">✅</span>
+      <span>${file.name} · ${hojas.length} hojas detectadas</span></div>`;
+    document.getElementById('b2').disabled=false;
+    buildModuleTabs();
+  } catch(e){
+    document.getElementById('gcAl').innerHTML=`
+      <div class="al al-er"><span class="al-ico">✗</span><span>Error: ${e.message}</span></div>`;
+  }
+});
+
+// CSV módulos
+// Los drops de módulos se registran en buildModuleTabs();
+
+function procesarCSVPreview(mk,txt){
+  const cronoKeys=new Set((S.cronograma[mk]||[]).map(f=>f.key));
+  const rows=parsearCSV(txt,cronoKeys);
+  const infoEl=document.getElementById(`in${mk}`);
+
+  if(rows===null){
+    infoEl.innerHTML=`<div class="al al-er"><span class="al-ico">⚠</span>
+      <span>Formato no reconocido. Verifica que sea el reporte estándar de Blackboard.</span></div>`;
+    return;
+  }
+  if(!rows.length){
+    infoEl.innerHTML=`<div class="al al-wa"><span class="al-ico">⚠</span>
+      <span>El CSV no tiene datos válidos.</span></div>`;
+    return;
+  }
+
+  S.csvData[mk]=rows;
+
+  const fechasU=[...new Set(rows.map(r=>r.key))].sort();
+  const rutesU=new Set(rows.map(r=>r.rut));
+  const matchesCrono=fechasU.filter(k=>cronoKeys.has(k));
+  const sinMatch=fechasU.filter(k=>!cronoKeys.has(k));
+
+  let html=`<div class="al al-ok"><span class="al-ico">✅</span>
+    <span>${rows.length} registros · ${rutesU.size} participantes<br>
+    Fechas detectadas: <strong>${fechasU.map(fkDisplay).join(' · ')}</strong><br>`;
+  if(matchesCrono.length)
+    html+=`Matches con cronograma: <strong>${matchesCrono.map(fkDisplay).join(' · ')}</strong>`;
+  if(sinMatch.length)
+    html+=`<br>Sin match en cronograma: ${sinMatch.map(fkDisplay).join(' · ')} (se ignorarán)`;
+  html+=`</span></div>`;
+  infoEl.innerHTML=html;
+
+  const ch=document.getElementById(`ch${mk}`);
+  ch.className='chip ok';
+  ch.textContent=`${mk} – ${rows.length} reg. · ${fechasU.length} fechas`;
+  document.querySelector(`[data-mod="${mk}"]`).classList.add('load');
+  document.getElementById('bPro').disabled=false;
+}
+
+// ════════════════════════════════════════════════════════
+// PASO 2: LEER PARTICIPANTES Y CRONOGRAMA
+// ════════════════════════════════════════════════════════
+async function leerBase(){
+  // PARTICIPANTES
+  const wsXml=await leerWs('PARTICIPANTES');
+  S.partes=[];
+  if(wsXml){
+    for(let r=2;r<=300;r++){
+      const cells=await leerFilaWs(wsXml,r);
+      const rutRaw=cells['B'], nombre=cells['C'];
+      if(rutRaw===undefined||rutRaw===null) break;
+      const rut=normRut(String(rutRaw));
+      if(rut&&rut!=='0'&&rut.toLowerCase()!=='rut')
+        S.partes.push({rut, nombre:String(nombre||'').trim(), row:r});
+    }
+  }
+  const pSub=document.getElementById('pSub'), pSt=document.getElementById('pSt');
+  if(S.partes.length){
+    pSub.textContent=`${S.partes.length} participantes encontrados.`;
+    pSt.innerHTML=`<div class="al al-ok"><span class="al-ico">✅</span>
+      <span>${S.partes.slice(0,5).map(p=>p.nombre||p.rut).join(' · ')}${S.partes.length>5?' · …':''}</span></div>`;
+  } else {
+    pSub.textContent='Sin participantes en PARTICIPANTES.';
+    pSt.innerHTML=`<div class="al al-er"><span class="al-ico">⚠</span>
+      <span>La hoja PARTICIPANTES está vacía. Complétala en el Excel y vuelve a subir.</span></div>`;
+  }
+
+  // CRONOGRAMA
+  const crXml=await leerWs('CRONOGRAMA');
+  S.cronograma={}; Object.keys(MOD).forEach(m=>S.cronograma[m]=[]);
+  let total=0;
+  if(crXml){
+    for(const [mk,cfg] of Object.entries(MOD)){
+      for(let di=0;di<cfg.cr.length;di++){
+        const r=cfg.cr[di];
+        const cells=await leerFilaWs(crXml,r);
+        const val=cells['A'];
+        let d=null;
+        if(typeof val==='number'&&val>1000) d=serial2date(val);
+        else if(typeof val==='string'){
+          const fp=parseFecha(val);
+          if(fp) d=fp.uniq||fp.mmdd||null;
+        }
+        if(d&&!isNaN(d.getTime())){
+          if(!S.cronograma[mk]) S.cronograma[mk]=[];
+          S.cronograma[mk].push({col:4+di, key:fk(d), fecha:d});
+          total++;
+        }
+      }
+    }
+  }
+  const cSub=document.getElementById('cSub'), cSt=document.getElementById('cSt');
+  if(total){
+    cSub.textContent=`${total} fechas encontradas.`;
+    cSt.innerHTML=`<div class="al al-ok"><span class="al-ico">✅</span>
+      <span style="font-size:12px">${Object.entries(S.cronograma)
+        .filter(([,v])=>v.length)
+        .map(([mk,fs])=>`<strong>${mk}</strong>: ${fs.map(f=>fkDisplay(f.key)).join(' · ')}`)
+        .join('<br>')}</span></div>`;
+  } else {
+    cSub.textContent='No se encontraron fechas en CRONOGRAMA.';
+    cSt.innerHTML=`<div class="al al-er"><span class="al-ico">⚠</span>
+      <span>CRONOGRAMA vacío o fechas no reconocibles.</span></div>`;
+  }
+  document.getElementById('b3').disabled=S.partes.length===0;
+}
+
+// ════════════════════════════════════════════════════════
+// TABS MÓDULOS (paso 3)
+// ════════════════════════════════════════════════════════
+function selMod(mk,btn){
+  document.querySelectorAll('#modTabs .mt').forEach(b=>b.classList.remove('act'));
+  btn.classList.add('act');
+  document.querySelectorAll('[id^="pm"]').forEach(p=>p.style.display='none');
+  document.getElementById(`pm${mk}`).style.display='block';
+}
+
+// ════════════════════════════════════════════════════════
+// PROCESAR — async correcto, for...of, robusto
+// ════════════════════════════════════════════════════════
+async function procesar(){
+  const btn=document.getElementById('bPro');
+  btn.disabled=true; btn.textContent='⏳ Procesando…';
+  document.getElementById('lb1').innerHTML='';
+  document.getElementById('lb2').innerHTML='';
+
+  try{
+    S.resultData={};
+    let totalCeldas=0;
+
+    for(const [mk,csvRows] of Object.entries(S.csvData)){
+      const cfg=MOD[mk];
+      const wsPath=S.sheetPaths[mk];
+      if(!wsPath){ log(`⚠ Hoja ${mk} no encontrada`,'lwa'); continue; }
+
+      log(`\n── Módulo ${mk} ──────────────────`,'lhl');
+      log(`   CSV: ${csvRows.length} registros únicos`,'ldm');
+
+      const fechasMod=S.cronograma[mk]||[];
+      if(!fechasMod.length){ log(`   ⚠ Sin fechas en CRONOGRAMA para ${mk}`,'lwa'); continue; }
+
+      log(`   CRONOGRAMA: ${fechasMod.map(f=>fkDisplay(f.key)).join(' · ')}`,'ldm');
+
+      const fechasCSV=[...new Set(csvRows.map(r=>r.key))].sort();
+      const matches=fechasCSV.filter(k=>fechasMod.some(f=>f.key===k));
+      log(`   Fechas CSV: ${fechasCSV.map(fkDisplay).join(' · ')}`,'ldm');
+      log(`   Matches: ${matches.length>0?matches.map(fkDisplay).join(' · '):'ninguno ⚠'}`,'ldm');
+
+      if(!matches.length){
+        log(`   ⚠ Ninguna fecha del CSV coincide con el CRONOGRAMA — módulo omitido`,'lwa');
+        continue;
+      }
+
+      // Mapa rut|fecha → rango
+      const mapaCSV={};
+      csvRows.forEach(r=>{ mapaCSV[`${r.rut}|${r.key}`]=r; });
+
+      // Leer XML del módulo
+      let wsXml=await S.gcZip.file(wsPath).async('text');
+
+      // Obtener estilos de la primera fila de datos (pueden ser self-closing)
+      const estiloSes=getEstiloCelda(wsXml, `D${cfg.dr}`);
+      const estiloN  =getEstiloCelda(wsXml, `N${cfg.dr}`);
+      const formulaN =getFórmulaCelda(wsXml, `N${cfg.dr}`);
+
+      log(`   Estilo sesión s="${estiloSes}", % s="${estiloN}"`,'ldm');
+
+      const modResult=[];
+      let escMod=0;
+
+      // for...of en lugar de forEach (correcto para async)
+      for(let pi=0;pi<S.partes.length;pi++){
+        const part=S.partes[pi];
+        const excelRow=cfg.dr+pi;
+        const sesiones={};
+        let sumaRangos=0;
+
+        for(const fi of fechasMod){
+          const k=`${part.rut}|${fi.key}`;
+          const found=mapaCSV[k];
+          if(found){
+            sesiones[fi.key]=found.rango;
+            sumaRangos+=found.rango;
+            // Escribir rango directamente en la celda
+            wsXml=escribirCelda(wsXml, `${colLetter(fi.col)}${excelRow}`, estiloSes, found.rango);
+            escMod++;
+          }
+        }
+
+        // Calcular % respecto a las fechas del CRONOGRAMA (no solo las del CSV)
+        const pct=fechasMod.length>0?Math.floor(100*sumaRangos/(fechasMod.length*3)):0;
+
+        // Escribir % — mantener fórmula para recálculo futuro en Excel
+        wsXml=escribirCelda(wsXml, `${colLetter(COL_N)}${excelRow}`, estiloN, pct, formulaN);
+
+        modResult.push({rut:part.rut, nombre:part.nombre, sesiones, pct});
+
+        if(Object.keys(sesiones).length>0)
+          log(`   ✓ ${part.nombre||part.rut} → ${Object.entries(sesiones).map(([k,v])=>`${fkDisplay(k)}:${v}`).join(' ')} → ${pct}%`,'lok');
+      }
+
+      S.gcZip.file(wsPath, wsXml);
+      S.resultData[mk]=modResult;
+      totalCeldas+=escMod;
+      log(`   ${escMod} celdas escritas en ${mk}`,'lok');
+
+      // Actualizar consolidado con valores del módulo actual
+      const consolName='Ficha - ASISTENCIA ACADEMICA';
+      const consolPath=S.sheetPaths[consolName];
+      if(consolPath && S.gcZip.file(consolPath)){
+        try{
+          let cXml=await S.gcZip.file(consolPath).async('text');
+          // consolColMap dinámico: D(4)=M1, E(5)=M2, ... según modulosActivos
+          const allMods=['M1','M2','M3','M4','M5','M6','M7'];
+          const consolColMap={};
+          allMods.forEach((m,i)=>{ consolColMap[m]=4+i; });
+          const consolCol=consolColMap[mk];
+          if(consolCol){
+            const estiloC=getEstiloCelda(cXml,colLetter(consolCol)+'6')||'87';
+            for(let pi=0;pi<modResult.length;pi++){
+              const consolRow=6+pi;
+              const fml=getFórmulaCelda(cXml,colLetter(consolCol)+consolRow);
+              cXml=escribirCelda(cXml,colLetter(consolCol)+consolRow,estiloC,modResult[pi].pct,fml);
+            }
+            // Actualizar % global (col K = índice 11)
+            const estiloH=getEstiloCelda(cXml,'K6')||'88';
+            for(let pi=0;pi<S.partes.length;pi++){
+              const cr=6+pi;
+              const modsCarg=S.modulosActivos.filter(m=>S.resultData[m]&&S.resultData[m].length>0).length||1;
+              let sumPct=0;
+              allMods.forEach(m=>{ sumPct+=((S.resultData[m]||[])[pi]?.pct||0); });
+              const pGlobal=Math.floor(sumPct/modsCarg);
+              const fmlK=getFórmulaCelda(cXml,'K'+cr);
+              cXml=escribirCelda(cXml,'K'+cr,estiloH,pGlobal,fmlK);
+            }
+            S.gcZip.file(consolPath,cXml);
+            log(`   ✓ Consolidado col ${colLetter(consolCol)} actualizado`,'ldm');
+          }
+        } catch(e){ log('   ⚠ Error consolidado: '+e.message,'lwa'); }
+      }
+    }
+
+    log(`\n✅ Completado. ${totalCeldas} celdas escritas en total.`,'lok');
+
+    // Forzar recálculo al abrir en Excel
+    try{
+      let wbXml=await S.gcZip.file('xl/workbook.xml').async('text');
+      wbXml=wbXml.replace(/<calcPr[^/]*\/>/,'<calcPr calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1" iterateCount="100" refMode="A1" iterate="false" iterateDelta="0.0001"/>');
+      S.gcZip.remove('xl/calcChain.xml');
+      S.gcZip.file('xl/workbook.xml',wbXml);
+    } catch(e){}
+
+    S.resultBlob=await S.gcZip.generateAsync({
+      type:'blob',
+      mimeType:'application/vnd.ms-excel.sheet.macroEnabled.12',
+      compression:'DEFLATE',
+      compressionOptions:{level:6}
+    });
+
+    document.getElementById('bDl').disabled=false;
+    irPaso(4);
+
+  } catch(e){
+    log(`Error crítico: ${e.message}`,'ler');
+    log(`Detalle: ${e.stack||e}`,'ler');
+    console.error(e);
+    btn.disabled=false;
+    btn.innerHTML='⚡ Procesar y generar Excel';
+  }
+}
+
+// ════════════════════════════════════════════════════════
+// RESULTADO
+// ════════════════════════════════════════════════════════
+function mostrarResultado(){
+  const mods=Object.keys(S.resultData);
+  let totCeldas=0, totComp=0;
+  mods.forEach(mk=>S.resultData[mk].forEach(p=>{
+    Object.values(p.sesiones).forEach(r=>{totCeldas++;if(r===3)totComp++;});
+  }));
+  const pctComp=totCeldas>0?Math.round(100*totComp/totCeldas):0;
+
+  document.getElementById('sGrid').innerHTML=`
+    <div class="stat ok"><div class="stat-n">${S.partes.length}</div><div class="stat-l">Participantes</div></div>
+    <div class="stat ok"><div class="stat-n">${mods.length}</div><div class="stat-l">Módulos</div></div>
+    <div class="stat ok"><div class="stat-n">${totCeldas}</div><div class="stat-l">Celdas escritas</div></div>
+    <div class="stat ${pctComp>=60?'ok':'wa'}"><div class="stat-n">${pctComp}%</div><div class="stat-l">Asist. ≥120min</div></div>`;
+
+  const tabs=document.getElementById('resTabs');
+  const cont=document.getElementById('resCont');
+  tabs.innerHTML=''; cont.innerHTML='';
+
+  mods.forEach((mk,i)=>{
+    const btn=document.createElement('button');
+    btn.className='mt load'+(i===0?' act':'');
+    btn.textContent=`Módulo ${mk.slice(1)}`;
+    btn.onclick=()=>{
+      document.querySelectorAll('#resTabs .mt').forEach(b=>b.classList.remove('act'));
+      btn.classList.add('act');
+      document.querySelectorAll('.rp').forEach(p=>p.style.display='none');
+      document.getElementById(`rp${mk}`).style.display='block';
+    };
+    tabs.appendChild(btn);
+
+    const fechas=S.cronograma[mk]||[];
+    const panel=document.createElement('div');
+    panel.id=`rp${mk}`; panel.className='rp tbl-w';
+    panel.style.display=i===0?'block':'none';
+
+    const ths=fechas.map(f=>`<th>${fkDisplay(f.key)}</th>`).join('');
+    const trs=S.resultData[mk].map(p=>{
+      const ses=fechas.map(f=>{
+        const r=p.sesiones[f.key];
+        return`<td><span class="rb r${r||0}">${r||'—'}</span></td>`;
+      }).join('');
+      return`<tr><td>${p.rut}</td><td>${p.nombre||'—'}</td>${ses}<td><strong>${p.pct}%</strong></td></tr>`;
+    }).join('');
+
+    panel.innerHTML=`<div class="tbl-sc"><table>
+      <thead><tr><th>RUT</th><th>Nombre</th>${ths}<th>% Asist.</th></tr></thead>
+      <tbody>${trs}</tbody></table></div>`;
+    cont.appendChild(panel);
+  });
+
+  // Copiar log al panel resultado
+  document.getElementById('lb2').innerHTML=document.getElementById('lb1').innerHTML;
+}
+
+// ════════════════════════════════════════════════════════
+// DESCARGAR
+// ════════════════════════════════════════════════════════
+function descargar(){
+  if(!S.resultBlob) return;
+  const nombre=(S.gcFile.name||'GC').replace(/\.[^.]+$/,'');
+  const fecha=new Date().toISOString().slice(0,10);
+  const url=URL.createObjectURL(S.resultBlob);
+  const a=document.createElement('a'); a.href=url;
+  a.download=`${nombre}_actualizado_${fecha}.xlsm`; a.click();
+  URL.revokeObjectURL(url);
+  log(`⬇ Descargado: ${nombre}_actualizado_${fecha}.xlsm`,'lok');
+}
+
+// ════════════════════════════════════════════════════════
+// REINICIAR
+// ════════════════════════════════════════════════════════
+function reiniciar(){
+  S.gcFile=null; S.gcZip=null; S.sheetPaths={}; S.ss=[];
+  S.partes=[]; S.cronograma={}; S.csvData={}; S.resultBlob=null; S.resultData={};
+  S.modulosActivos=[];
+  S.numModulos=7;
+  // Resetear selector visual a 7
+  document.querySelectorAll('#modSelBtns .mod-btn').forEach(b=>{
+    b.classList.toggle('sel', b.dataset.n==='7');
+  });
+  const hint=document.getElementById('modSelHint');
+  if(hint) hint.textContent='Mostrando M1 – M7 · Cambia si tu diplomado tiene menos módulos';
+
+  const dGC=document.getElementById('dGC');
+  if(dGC) dGC.classList.remove('ok','ov');
+  const nGC=document.getElementById('nGC'); if(nGC) nGC.textContent='';
+  document.getElementById('gcAl').innerHTML='';
+  document.getElementById('pgGC').style.width='0';
+  document.getElementById('b2').disabled=true;
+  document.getElementById('bPro').disabled=true;
+  document.getElementById('bDl').disabled=true;
+  document.getElementById('lb1').innerHTML='';
+  document.getElementById('lb2').innerHTML='';
+  document.getElementById('logSec').style.display='none';
+
+  // Tabs/paneles/chips se reconstruyen al subir nuevo GC
+  document.getElementById('modTabs').innerHTML='';
+  document.getElementById('modPanels').innerHTML='';
+  document.getElementById('chipsWrap').innerHTML='';
+
+  irPaso(1);
+}
+
+// ════════════════════════════════════════════════════════
+// CONSTRUIR TABS DINÁMICOS SEGÚN MÓDULOS EXISTENTES EN EL GC
+// ════════════════════════════════════════════════════════
+function buildModuleTabs(){
+  // Usar SIEMPRE los módulos que el usuario seleccionó
+  const todos=['M1','M2','M3','M4','M5','M6','M7'].slice(0, S.numModulos||7);
+  const enGC = todos.filter(mk=>S.sheetPaths[mk]);
+  const faltanEnGC = todos.filter(mk=>!S.sheetPaths[mk]);
+
+  // modulosActivos = todos los seleccionados (con o sin hoja en el GC)
+  S.modulosActivos = todos;
+
+  const tabsEl  =document.getElementById('modTabs');
+  const panelsEl=document.getElementById('modPanels');
+  const chipsEl =document.getElementById('chipsWrap');
+  tabsEl.innerHTML=''; panelsEl.innerHTML=''; chipsEl.innerHTML='';
+
+  // Alerta si el GC no tiene todas las hojas seleccionadas
+  const gcAl=document.getElementById('gcAl');
+  if(faltanEnGC.length>0){
+    gcAl.innerHTML=`<div class="al al-wa"><span class="al-ico">⚠</span>
+      <span>El GC subido tiene <strong>${enGC.length} módulo${enGC.length!==1?'s':''}</strong>
+      (${enGC.join(', ')}), pero seleccionaste <strong>${todos.length}</strong>.
+      ${faltanEnGC.join(', ')} no están en este archivo — usa el GC de 7 módulos
+      o ajusta el selector.</span></div>` + gcAl.innerHTML.replace(/<div class="al al-wa[^>]*>[\s\S]*?<\/div>/,'');
+  }
+
+  todos.forEach((mk,i)=>{
+    const num=mk.slice(1);
+    const tieneHoja=!!S.sheetPaths[mk];
+
+    // Tab — gris si no hay hoja en el GC
+    const btn=document.createElement('button');
+    btn.className='mt'+(i===0?' act':'')+(tieneHoja?'':' disabled-tab');
+    btn.dataset.mod=mk;
+    btn.title = tieneHoja ? '' : `${mk} no existe en este GC`;
+    btn.innerHTML='Módulo '+num+(tieneHoja?'':' <span style="font-size:10px;opacity:.6">—</span>');
+    btn.onclick=()=>selMod(mk,btn);
+    tabsEl.appendChild(btn);
+
+    // Panel
+    const panel=document.createElement('div');
+    panel.id='pm'+mk;
+    panel.style.display=i===0?'block':'none';
+
+    if(tieneHoja){
+      panel.innerHTML=`
+        <div class="drop" id="d${mk}">
+          <input type="file" id="i${mk}" accept=".csv,.txt">
+          <span class="drop-ico">📄</span>
+          <div class="drop-lbl">CSV Blackboard – Módulo ${num}</div>
+          <div class="drop-hint">Puede incluir varias sesiones juntas</div>
+          <div class="drop-fname" id="n${mk}"></div>
+        </div>
+        <div id="in${mk}"></div>`;
+      // ⚠ NO llamar setupDrop aquí — el panel aún no está en el DOM
+      // Se registra después de appendChild (ver abajo)
+    } else {
+      panel.innerHTML=`<div class="al al-wa" style="margin-top:8px">
+        <span class="al-ico">⚠</span>
+        <span>La hoja <strong>${mk}</strong> no existe en el GC subido.
+        Para usar este módulo sube el GC de 7 módulos o reduce el selector a
+        ${enGC.length} módulo${enGC.length!==1?'s':''}.</span></div>`;
+    }
+    panelsEl.appendChild(panel);
+
+    // Registrar drop handler AQUÍ, cuando el panel ya está en el DOM
+    if(tieneHoja){
+      setupDrop('d'+mk,'i'+mk,f=>{
+        document.getElementById('n'+mk).textContent=f.name;
+        document.getElementById('d'+mk).classList.add('ok');
+        const r=new FileReader();
+        r.onload=e=>procesarCSVPreview(mk,e.target.result);
+        r.readAsText(f,'UTF-8');
+      });
+    }
+
+    // Chip
+    const chip=document.createElement('span');
+    chip.className='chip'+(tieneHoja?'':' chip-disabled');
+    chip.id='ch'+mk;
+    chip.textContent=tieneHoja ? mk+' – sin datos' : mk+' – no disponible';
+    chipsEl.appendChild(chip);
+  });
+
+  log('   Módulos en GC: '+enGC.join(', ')+(faltanEnGC.length?'  |  Sin hoja: '+faltanEnGC.join(', '):''),'ldm');
+}
+
+// ═══ Captura global de errores JavaScript no manejados ═══
+window.onerror = function(msg, src, line, col, err){
+  const logEl=document.getElementById('lb1');
+  if(logEl){
+    const d=document.createElement('div');
+    d.className='ler';
+    d.textContent='⚠ Error JS: '+msg+' (línea '+line+')';
+    logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;
+    document.getElementById('logSec').style.display='block';
+  }
+  return false;
+};
+window.addEventListener('unhandledrejection',function(e){
+  const logEl=document.getElementById('lb1');
+  if(logEl){
+    const d=document.createElement('div');
+    d.className='ler';
+    d.textContent='⚠ Error async: '+(e.reason?.message||e.reason);
+    logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;
+    document.getElementById('logSec').style.display='block';
+  }
+});
+
+// ════════════════════════════════════════════════════════
+// SELECTOR DE NÚMERO DE MÓDULOS
+// ════════════════════════════════════════════════════════
+function selNumMods(n, btn){
+  S.numModulos = n;
+
+  // Actualizar botones visuales
+  document.querySelectorAll('#modSelBtns .mod-btn').forEach(b => {
+    b.classList.toggle('sel', parseInt(b.dataset.n) === n);
+  });
+
+  // Actualizar hint
+  const hint = document.getElementById('modSelHint');
+  const modNames = ['M1','M2','M3','M4','M5','M6','M7'].slice(0, n);
+  hint.textContent = `Mostrando ${modNames.join(' – ')} · ${n} módulo${n>1?'s':''}`;
+
+  // Si ya hay un GC cargado → reconstruir tabs con el nuevo número
+  if(S.gcZip && Object.keys(S.sheetPaths).length > 0){
+    buildModuleTabs();
+  }
+}
+
+</script>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div style="display:flex;align-items:center">
+    <div class="footer-logo"><span>Duoc</span><span>UC</span></div>
+    <div class="footer-sep"></div>
+    <span class="footer-text">Educación Continua &nbsp;·&nbsp; Sistema de Gestión de Asistencia – Diplomados</span>
+  </div>
+  <div class="footer-right">© 2026 DuocUC Educación Continua &nbsp;·&nbsp; Desarrollado por Coordinación Académica</div>
+</div>
+</body>
+</html>

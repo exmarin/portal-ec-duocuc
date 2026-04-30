@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Gestión de Certificados – Diplomados</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --azul:#1A3A5C;--azul2:#2E6DA4;--azul3:#E8F1FA;--azul4:#244B72;
+  --verde:#2E7D32;--verde2:#E8F5E9;
+  --rojo:#C62828;--rojo2:#FFEBEE;
+  --amari:#F5A800;--amari2:#FFF8E1;
+  --g0:#fff;--g1:#F8F9FA;--g2:#E9ECEF;--g3:#ADB5BD;--g4:#6C757D;--g5:#212529;
+  --r:12px;--sh:0 1px 4px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:#F0F2F5;color:var(--g5);
+     min-height:100vh;display:flex;flex-direction:column}
+
+/* TOPBAR */
+.topbar{background:var(--azul);display:flex;align-items:center;justify-content:space-between;
+        padding:0 32px;height:54px;position:sticky;top:0;z-index:200}
+.topbar-left{display:flex;align-items:center;gap:16px}
+.topbar-brand{color:var(--amari);font-size:18px;font-weight:800;letter-spacing:-.02em}
+.topbar-sep{width:1px;height:24px;background:rgba(255,255,255,.18)}
+.topbar-title{color:#fff;font-size:13.5px;font-weight:500;opacity:.92}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-tag{background:var(--amari);color:var(--azul);font-size:10.5px;font-weight:700;
+            padding:4px 14px;border-radius:4px;letter-spacing:.06em;text-transform:uppercase}
+.topbar-help{background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:600;
+             padding:5px 14px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.15);
+             transition:background .2s}
+.topbar-help:hover{background:rgba(255,255,255,.2)}
+
+/* LAYOUT */
+.main{flex:1;max-width:1100px;width:100%;margin:0 auto;padding:32px 28px 60px}
+
+/* STEPS BAR */
+.steps-bar{display:flex;align-items:center;justify-content:center;margin-bottom:36px}
+.step-item{display:flex;align-items:center;gap:10px}
+.step-num{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;
+          justify-content:center;font-size:13px;font-weight:700;
+          background:var(--g2);color:var(--g3);transition:all .3s;flex-shrink:0}
+.step-label{font-size:12.5px;font-weight:500;color:var(--g3);transition:all .3s;white-space:nowrap}
+.step-line{width:120px;height:2px;background:var(--g2);margin:0 12px;transition:all .3s;flex-shrink:0}
+@media(max-width:700px){.step-line{width:40px}.step-label{font-size:10px}}
+.step-item.active .step-num{background:var(--azul);color:#fff;box-shadow:0 0 0 4px rgba(26,58,92,.15)}
+.step-item.active .step-label{color:var(--azul);font-weight:700}
+.step-item.done .step-num{background:var(--verde);color:#fff}
+.step-item.done .step-label{color:var(--verde);font-weight:600}
+.step-line.done{background:var(--verde)}
+
+/* CARD */
+.card{background:#fff;border:1px solid var(--g2);border-radius:var(--r);
+      padding:28px 32px;margin-bottom:20px;box-shadow:var(--sh)}
+.card-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.card-icon{font-size:20px}
+.card-title{font-size:15px;font-weight:700;color:var(--g5)}
+.card-sub{font-size:12.5px;color:var(--g4);margin-bottom:20px;line-height:1.5}
+
+/* DROPZONE */
+.dropzone{border:2px dashed var(--g2);border-radius:var(--r);padding:48px 24px;
+          text-align:center;cursor:pointer;transition:all .25s;background:var(--g1)}
+.dropzone:hover,.dropzone.drag{border-color:var(--amari);background:var(--amari2)}
+.dropzone.loaded{border-color:var(--verde);border-style:solid;background:var(--verde2)}
+.dz-icon{font-size:42px;margin-bottom:10px;opacity:.65}
+.dz-text{font-size:13px;color:var(--g4);font-weight:500}
+.dz-hint{font-size:11px;color:var(--g3);margin-top:4px}
+.dz-fname{font-size:12px;color:var(--verde);font-weight:600;margin-top:8px;word-break:break-all}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 32px;
+     border:none;border-radius:8px;font-size:13px;font-weight:600;
+     cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-primary{background:var(--azul);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--azul4);box-shadow:0 4px 12px rgba(26,58,92,.25)}
+.btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.btn-success{background:var(--verde);color:#fff}
+.btn-success:hover{background:#1B5E20}
+.btn-outline{background:transparent;color:var(--azul);border:1.5px solid var(--g2)}
+.btn-outline:hover{border-color:var(--azul);background:var(--azul3)}
+.btn-row{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+/* INFO BOX */
+.info-box{padding:14px 18px;background:var(--azul3);border-radius:8px;
+          font-size:12px;color:var(--azul);line-height:1.65;margin-top:16px;
+          border-left:3px solid var(--azul2)}
+
+/* PROGRESS */
+.pbar{width:100%;height:6px;background:var(--g2);border-radius:6px;overflow:hidden;margin:14px 0}
+.pfill{height:100%;background:linear-gradient(90deg,var(--azul2),var(--verde));
+       border-radius:6px;transition:width .3s;width:0%}
+
+/* LOG */
+.log-h{background:var(--azul);color:#fff;padding:10px 18px;
+       border-radius:8px 8px 0 0;font-size:10px;font-weight:700;
+       text-transform:uppercase;letter-spacing:.06em}
+.log-b{background:#0D1117;border-radius:0 0 8px 8px;
+       padding:14px 18px;font-family:'Consolas','Courier New',monospace;
+       font-size:11.5px;line-height:1.85;max-height:220px;
+       overflow-y:auto;color:#8b949e}
+.lok{color:#56D364}.ler{color:#F85149}.lwa{color:#E3B341}.lin{color:#58A6FF}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:500px){.stats{grid-template-columns:1fr}}
+.stat{background:#fff;border:1px solid var(--g2);border-radius:var(--r);
+      padding:18px;text-align:center;box-shadow:var(--sh)}
+.stat-n{font-size:30px;font-weight:800;color:var(--azul);line-height:1}
+.stat-l{font-size:10px;color:var(--g3);margin-top:5px;font-weight:700;
+        text-transform:uppercase;letter-spacing:.05em}
+.stat.ok .stat-n{color:var(--verde)}.stat.wa .stat-n{color:#E65100}
+
+/* TABLE */
+.tbl{background:#fff;border-radius:var(--r);border:1px solid var(--g2);
+     overflow:hidden;box-shadow:var(--sh)}
+.tbl-sc{overflow-x:auto;max-height:400px;overflow-y:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{position:sticky;top:0;background:var(--azul);color:#fff;
+   padding:10px 14px;text-align:left;font-size:10.5px;font-weight:700;
+   letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;z-index:1}
+td{padding:9px 14px;border-bottom:1px solid var(--g2);white-space:nowrap}
+tr:hover td{background:var(--azul3)}
+.badge{display:inline-block;padding:3px 12px;border-radius:20px;
+       font-size:10px;font-weight:700;letter-spacing:.03em}
+.badge-ok{background:var(--verde2);color:var(--verde)}
+.badge-wa{background:var(--amari2);color:#E65100}
+
+/* VISIBILITY */
+.hidden{display:none}
+
+/* PLATFORM SELECTOR */
+.platform-opt{display:flex;align-items:flex-start;gap:12px;padding:16px 18px;
+              border:2px solid var(--g2);border-radius:var(--r);cursor:pointer;
+              transition:all .2s;background:#fff}
+.platform-opt:hover{border-color:var(--azul2);background:var(--azul3)}
+.platform-opt.active{border-color:var(--azul);background:var(--azul3);
+                     box-shadow:0 0 0 3px rgba(26,58,92,.1)}
+.plat-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--g3);
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+            margin-top:2px;transition:all .2s}
+.platform-opt.active .plat-radio{border-color:var(--azul);background:var(--azul)}
+.plat-dot{width:8px;height:8px;border-radius:50%;background:transparent;transition:all .2s}
+.platform-opt.active .plat-dot{background:#fff}
+.plat-name{font-size:13px;font-weight:700;color:var(--azul);margin-bottom:4px}
+.plat-desc{font-size:11px;color:var(--g4);line-height:1.5}
+.fade-in{animation:fadeIn .35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* SUCCESS BANNER */
+.success-banner{background:var(--verde2);border:1px solid var(--verde);border-radius:var(--r);
+                padding:18px 24px;display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.success-banner-icon{font-size:28px}
+.success-banner-text{font-size:13px;color:var(--verde);font-weight:600}
+.success-banner-sub{font-size:11.5px;color:var(--g4);font-weight:400;margin-top:2px}
+
+/* FOOTER */
+.footer{background:var(--azul);padding:14px 32px;display:flex;align-items:center;
+        justify-content:space-between;margin-top:auto;flex-wrap:wrap;gap:8px}
+.footer-left{display:flex;align-items:center;gap:8px}
+.footer-brand{color:var(--amari);font-size:13px;font-weight:800}
+.footer-sep{color:rgba(255,255,255,.2);font-size:12px}
+.footer-text{color:rgba(255,255,255,.45);font-size:11px}
+.footer-right{color:rgba(255,255,255,.35);font-size:11px}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;
+          align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:12px;padding:32px;max-width:580px;width:90%;
+       max-height:80vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-brand">DuocUC</span>
+    <span class="topbar-sep"></span>
+    <span class="topbar-title">Sistema de Gestión de Certificados – Diplomados</span>
+  </div>
+  <div class="topbar-right">
+    <span class="topbar-tag">Educación Continua</span>
+    <button class="topbar-help" onclick="toggleHelp()">? Ayuda</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- STEPS -->
+  <div class="steps-bar">
+    <div class="step-item active" id="s1"><div class="step-num">1</div><div class="step-label">Excel + Códigos</div></div>
+    <div class="step-line" id="l1"></div>
+    <div class="step-item" id="s2"><div class="step-num">2</div><div class="step-label">PDF Certificados</div></div>
+    <div class="step-line" id="l2"></div>
+    <div class="step-item" id="s3"><div class="step-num">3</div><div class="step-label">Resultado</div></div>
+  </div>
+
+  <!-- ===================== STEP 1: EXCEL ===================== -->
+  <div id="panel1">
+
+    <div class="card">
+      <div class="card-h"><span class="card-icon">📊</span><span class="card-title">Archivo Excel del Diplomado</span></div>
+      <div class="card-sub">Sube el Excel (.xlsx) que contiene los datos de los alumnos en Hoja1 y los códigos en Hoja2.</div>
+      <div style="max-width:540px;margin:0 auto">
+        <div class="dropzone" id="dzExcel"
+             onclick="document.getElementById('inExcel').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="event.preventDefault();this.classList.remove('drag');onExcelFile(event.dataTransfer.files[0])">
+          <div class="dz-icon">📂</div>
+          <div class="dz-text">Arrastra el archivo Excel aquí o haz clic</div>
+          <div class="dz-hint">.xlsx o .xls</div>
+          <div class="dz-fname" id="excelFname"></div>
+        </div>
+        <input type="file" id="inExcel" accept=".xlsx,.xls" hidden onchange="onExcelFile(this.files[0])">
+      </div>
+      <div class="info-box">
+        <b>Formato esperado:</b><br>
+        <b>📦 Modo Eclass:</b> Excel con columna <b>"Codigo"</b> en Hoja1. Los PDFs se nombrarán con el código (ej: 894993.pdf).<br>
+        <b>🎓 Modo DuocUC:</b> Excel SIN columna <b>"Codigo"</b>. Los PDFs se nombrarán con el RUT sin puntos ni guiones (ej: 162471724.pdf).
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnStep1" disabled onclick="runCruce()">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- Cruce results (shown after processing) -->
+    <div id="cruceResults" class="hidden">
+      <div class="card fade-in">
+        <div class="card-h"><span class="card-icon">⚙️</span><span class="card-title">Análisis del Excel</span></div>
+        <div class="pbar"><div class="pfill" id="pgCruce"></div></div>
+        <div class="log-h">📋 Log de actividad</div>
+        <div class="log-b" id="logCruce"></div>
+      </div>
+
+      <div id="cruceStats" class="hidden">
+        <div class="card fade-in">
+          <div class="stats" id="statsCruce"></div>
+          <div class="tbl"><div class="tbl-sc">
+            <table><thead><tr>
+              <th>N°</th><th>Nombre</th><th>RUT</th><th>Código</th><th>Estado</th>
+            </tr></thead><tbody id="tblCruce"></tbody></table>
+          </div></div>
+          <div class="btn-row" style="margin-top:18px">
+            <button class="btn btn-success" id="btnDlExcelCruce" onclick="downloadExcel()">⬇ Descargar Excel con Códigos</button>
+            <button class="btn btn-primary" onclick="goStep2()">Continuar al PDF →</button>
+            <button class="btn btn-outline" onclick="resetAll()">↺ Reiniciar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== STEP 2: PDF ===================== -->
+  <div id="panel2" class="hidden">
+
+    <div class="success-banner fade-in">
+      <span class="success-banner-icon">✅</span>
+      <div>
+        <div class="success-banner-text" id="step2BannerText">Datos procesados — <span id="matchCount"></span> alumnos</div>
+        <div class="success-banner-sub" id="step2BannerSub">Ahora sube el PDF con los certificados.</div>
+      </div>
+    </div>
+
+    <!-- Auto-detected mode indicator -->
+    <div class="card" style="padding:16px 24px;margin-bottom:16px;display:flex;align-items:center;gap:14px" id="modeIndicator">
+      <div style="font-size:24px" id="modeIcon">📦</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--azul)" id="modeName">Modo detectado</div>
+        <div style="font-size:11.5px;color:var(--g4)" id="modeDesc">Descripción del modo</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="card-icon">📄</span><span class="card-title">PDF de Certificados</span></div>
+      <div class="card-sub">Sube el PDF que contiene todos los certificados. Se separará una página por alumno.</div>
+      <div style="max-width:540px;margin:0 auto">
+        <div class="dropzone" id="dzPdf"
+             onclick="document.getElementById('inPdf').click()"
+             ondragover="event.preventDefault();this.classList.add('drag')"
+             ondragleave="this.classList.remove('drag')"
+             ondrop="event.preventDefault();this.classList.remove('drag');onPdfFile(event.dataTransfer.files[0])">
+          <div class="dz-icon">📄</div>
+          <div class="dz-text">Arrastra el PDF aquí o haz clic</div>
+          <div class="dz-hint">.pdf</div>
+          <div class="dz-fname" id="pdfFname"></div>
+        </div>
+        <input type="file" id="inPdf" accept=".pdf" hidden onchange="onPdfFile(this.files[0])">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnStep2" disabled onclick="runPdfSplit()">▶ Procesar Certificados</button>
+        <button class="btn btn-outline" onclick="resetAll()">↺ Reiniciar</button>
+      </div>
+    </div>
+
+    <div id="pdfProcessing" class="hidden">
+      <div class="card fade-in">
+        <div class="card-h"><span class="card-icon">⚙️</span><span class="card-title">Separando certificados</span></div>
+        <div class="pbar"><div class="pfill" id="pgPdf"></div></div>
+        <div class="log-h">📋 Log de actividad</div>
+        <div class="log-b" id="logPdf"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== STEP 3: RESULTS ===================== -->
+  <div id="panel3" class="hidden">
+
+    <div class="success-banner fade-in">
+      <span class="success-banner-icon">🎉</span>
+      <div>
+        <div class="success-banner-text">Certificados procesados exitosamente</div>
+        <div class="success-banner-sub">Descarga el ZIP con todos los PDFs individuales nombrados por código.</div>
+      </div>
+    </div>
+
+    <div class="card fade-in">
+      <div class="card-h"><span class="card-icon">📋</span><span class="card-title">Resultado Final</span></div>
+      <div class="stats" id="statsPdf"></div>
+      <div class="tbl"><div class="tbl-sc">
+        <table><thead><tr>
+          <th>Archivo</th><th>RUT</th><th>Código</th><th>Pág</th><th>Estado</th>
+        </tr></thead><tbody id="tblPdf"></tbody></table>
+      </div></div>
+      <div class="btn-row" style="margin-top:18px">
+        <button class="btn btn-success" onclick="downloadZip()">⬇ Descargar ZIP</button>
+        <button class="btn btn-success" id="btnDlExcelFinal" onclick="downloadExcel()">⬇ Descargar Excel con Códigos</button>
+        <button class="btn btn-outline" onclick="resetAll()">↺ Nuevo proceso</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <div class="footer-left">
+    <span class="footer-brand">DuocUC</span>
+    <span class="footer-sep">|</span>
+    <span class="footer-text">Educación Continua · Sistema de Gestión de Certificados – Diplomados</span>
+  </div>
+  <div class="footer-right">© 2026 DuocUC Educación Continua · Desarrollado por Coordinación Académica</div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-bg" id="helpModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal">
+    <h3 style="color:var(--azul);margin-bottom:16px;font-size:16px">📖 Ayuda del Sistema</h3>
+    <div style="font-size:13px;color:var(--g4);line-height:1.75">
+      <p>Este sistema procesa certificados de diplomados en <b>3 pasos:</b></p>
+      <br>
+      <p><b>Paso 1 — Análisis del Excel</b><br>
+      Sube el Excel del diplomado. El sistema detecta automáticamente el modo según la presencia de la columna <b>"Codigo"</b> en Hoja1. En ambos casos, extrae los códigos o RUTs para usarlos en la separación de PDFs.</p>
+      <br>
+      <p><b>Paso 2 — PDF de Certificados</b><br>
+      Sube el PDF que contiene todos los certificados (una página = un certificado). El sistema extrae el RUT de cada página y lo cruza con los datos del Excel. Separa cada certificado como PDF individual nombrado con su código (Eclass) o RUT (DuocUC).</p>
+      <br>
+      <p><b>Paso 3 — Descargar</b><br>
+      Descarga el ZIP con todos los PDFs separados y organizados según su código o RUT.</p>
+      <br>
+      <p><b>🔒 Privacidad:</b> Todo se procesa 100% en tu navegador. Ningún archivo se envía a internet.</p>
+    </div>
+    <div style="text-align:right;margin-top:20px">
+      <button class="btn btn-primary" onclick="document.getElementById('helpModal').classList.remove('open')">Entendido</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ UTILS ============ */
+function normalizeRut(r){
+  return r?String(r).replace(/\./g,'').replace(/-/g,'').replace(/\s/g,'').trim().toUpperCase():'';
+}
+function readBuf(f){
+  return new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsArrayBuffer(f)});
+}
+function toggleHelp(){document.getElementById('helpModal').classList.toggle('open')}
+function show(id){document.getElementById(id).classList.remove('hidden')}
+function hide(id){document.getElementById(id).classList.add('hidden')}
+
+/* ============ STEP MANAGEMENT ============ */
+function setStep(n){
+  ['s1','s2','s3'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.classList.remove('active','done');
+    if(i<n-1)el.classList.add('done');
+    else if(i===n-1)el.classList.add('active');
+  });
+  ['l1','l2'].forEach((id,i)=>{
+    document.getElementById(id).classList.toggle('done',i<n-1);
+  });
+}
+
+/* ============ STATE ============ */
+let excelFile=null, pdfFileData=null, pdfFileName='';
+let updatedWb=null, updatedName='';
+let rutToCode={};
+let genZip=null, zipName='';
+let selectedPlatform='eclass'; // auto-detected: 'eclass' = codigo, 'duoc' = rut
+
+/* ============ STEP 1: EXCEL ============ */
+function onExcelFile(f){
+  if(!f)return;
+  excelFile=f;
+  document.getElementById('dzExcel').classList.add('loaded');
+  document.getElementById('excelFname').textContent='✓ '+f.name;
+  document.getElementById('btnStep1').disabled=false;
+}
+
+function logC(m,c=''){const b=document.getElementById('logCruce');b.innerHTML+=`<div class="${c}">${m}</div>`;b.scrollTop=b.scrollHeight}
+
+async function runCruce(){
+  const btn=document.getElementById('btnStep1');
+  btn.disabled=true;btn.textContent='⏳ Procesando...';
+  show('cruceResults');
+  const pg=document.getElementById('pgCruce');
+  document.getElementById('logCruce').innerHTML='';
+  rutToCode={};
+
+  try{
+    logC('📊 Leyendo archivo Excel...','lin');pg.style.width='15%';
+    const d=await readBuf(excelFile);
+    const wb=XLSX.read(d,{type:'array',cellStyles:true});
+
+    const sn1=wb.SheetNames[0];
+    
+    // Detectar modo por presencia de columna "Codigo" en Hoja1
+    const ws=wb.Sheets[sn1];
+    const rng=XLSX.utils.decode_range(ws['!ref']);
+    let cinIdx=-1,codIdx=-1,nameIdx=-1;
+    for(let c=rng.s.c;c<=rng.e.c;c++){
+      const cl=ws[XLSX.utils.encode_cell({r:rng.s.r,c})];
+      if(cl){const v=String(cl.v||'').toUpperCase();
+        if(v.includes('CIN'))cinIdx=c;
+        if(v.includes('CODIGO')||v.includes('CÓDIGO'))codIdx=c;
+        if(v.includes('NOMBRE'))nameIdx=c;
+      }
+    }
+    
+    const tieneColumnaCodigo = codIdx !== -1;
+
+    if(tieneColumnaCodigo){
+      // ========== MODO ECLASS: Columna "Codigo" presente en Hoja1 ==========
+      selectedPlatform='eclass';
+      logC(`✓ Columna "Codigo" detectada en Hoja1 → Modo Eclass`,'lok');
+      pg.style.width='30%';
+
+      if(cinIdx===-1){logC('❌ No se encontró columna "CIN" en Hoja1','ler');btn.disabled=false;btn.textContent='Continuar →';return}
+      logC(`✓ Hoja1: columnas CIN y Codigo encontradas`,'lok');pg.style.width='50%';
+
+      const res=[];let okN=0,noN=0;
+      for(let r=rng.s.r+1;r<=rng.e.r;r++){
+        const cc=ws[XLSX.utils.encode_cell({r,c:cinIdx})];
+        const cin=cc?String(cc.v||''):'';
+        if(!cin)continue;
+        const nm=nameIdx>=0?(ws[XLSX.utils.encode_cell({r,c:nameIdx})]||{}).v||'':'';
+        const codCell=ws[XLSX.utils.encode_cell({r,c:codIdx})];
+        const code=codCell?String(codCell.v||'').trim():'';
+        const rn=normalizeRut(cin);
+        if(code){
+          okN++;rutToCode[rn]=code;
+          res.push({n:r-rng.s.r,nombre:nm,cin,codigo:code,estado:'OK'});
+          logC(`  ✓ ${cin} → ${code}`,'lok');
+        }else{
+          noN++;
+          res.push({n:r-rng.s.r,nombre:nm,cin,codigo:'—',estado:'Sin código'});
+          logC(`  ⚠ ${cin} → Sin código asignado`,'lwa');
+        }
+      }
+      pg.style.width='100%';
+      updatedWb=null; // No hay Excel modificado en este modo
+
+      logC(`\n✅ Lectura completada: ${okN} con código, ${noN} sin código`,okN===res.length?'lok':'lwa');
+      logC(`📌 Modo Eclass: Los PDFs se nombrarán con el CÓDIGO`,'lin');
+
+      document.getElementById('statsCruce').innerHTML=`
+        <div class="stat"><div class="stat-n">${res.length}</div><div class="stat-l">Total registros</div></div>
+        <div class="stat ok"><div class="stat-n">${okN}</div><div class="stat-l">Con código</div></div>
+        <div class="stat ${noN?'wa':'ok'}"><div class="stat-n">${noN}</div><div class="stat-l">Sin código</div></div>`;
+      document.getElementById('tblCruce').innerHTML=res.map(x=>`<tr>
+        <td style="text-align:center">${x.n}</td><td>${x.nombre}</td><td>${x.cin}</td>
+        <td><b>${x.codigo}</b></td>
+        <td><span class="badge ${x.estado==='OK'?'badge-ok':'badge-wa'}">${x.estado}</span></td></tr>`).join('');
+
+      show('cruceStats');
+      document.getElementById('matchCount').textContent=okN;
+
+    } else {
+      // ========== MODO DUOCUC: Sin columna "Codigo" → RUT como identificador ==========
+      selectedPlatform='duoc';
+      logC(`✓ Columna "Codigo" no encontrada → Modo DuocUC (RUT)`,'lok');
+      pg.style.width='30%';
+
+      if(cinIdx===-1){logC('❌ No se encontró columna "CIN" en Hoja1','ler');btn.disabled=false;btn.textContent='Continuar →';return}
+
+      pg.style.width='60%';
+      const res=[];let count=0;
+      for(let r=rng.s.r+1;r<=rng.e.r;r++){
+        const cc=ws[XLSX.utils.encode_cell({r,c:cinIdx})];
+        const cin=cc?String(cc.v||''):'';
+        if(!cin)continue;
+        const nm=nameIdx>=0?(ws[XLSX.utils.encode_cell({r,c:nameIdx})]||{}).v||'':'';
+        const rn=normalizeRut(cin);
+        rutToCode[rn]=rn; // En modo DuocUC, el "código" ES el RUT normalizado sin puntos ni guiones
+        count++;
+        res.push({n:r-rng.s.r,nombre:nm,cin,codigo:rn,estado:'OK'});
+        logC(`  ✓ ${cin} → ${rn}`,'lok');
+      }
+      pg.style.width='100%';
+      updatedWb=null;
+
+      logC(`\n✅ ${count} RUTs extraídos`,'lok');
+      logC(`📌 Modo DuocUC: Los PDFs se nombrarán con el RUT sin puntos ni guiones`,'lin');
+
+      document.getElementById('statsCruce').innerHTML=`
+        <div class="stat"><div class="stat-n">${count}</div><div class="stat-l">Total alumnos</div></div>
+        <div class="stat ok"><div class="stat-n">${count}</div><div class="stat-l">RUTs extraídos</div></div>
+        <div class="stat"><div class="stat-n">—</div><div class="stat-l">Sin columna código</div></div>`;
+      document.getElementById('tblCruce').innerHTML=res.map(x=>`<tr>
+        <td style="text-align:center">${x.n}</td><td>${x.nombre}</td><td>${x.cin}</td>
+        <td><b>${x.codigo}</b></td>
+        <td><span class="badge badge-ok">${x.estado}</span></td></tr>`).join('');
+
+      show('cruceStats');
+      document.getElementById('matchCount').textContent=count;
+    }
+
+  }catch(e){logC('❌ Error: '+e.message,'ler');console.error(e)}
+  btn.disabled=false;btn.textContent='Continuar →';
+}
+
+function downloadExcel(){
+  if(!updatedWb)return;
+  const o=XLSX.write(updatedWb,{bookType:'xlsx',type:'array'});
+  saveAs(new Blob([o],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),updatedName);
+}
+
+function goStep2(){
+  hide('panel1');show('panel2');setStep(2);
+  // Set mode indicator
+  if(selectedPlatform==='eclass'){
+    document.getElementById('modeIcon').textContent='📦';
+    document.getElementById('modeName').textContent='Modo Eclass — Nombre PDF: Código';
+    document.getElementById('modeDesc').textContent='Se detectó columna "Codigo" en Hoja1. Los PDFs se nombrarán con el código (ej: 894993.pdf)';
+    document.getElementById('step2BannerText').innerHTML='Códigos leídos correctamente — <span id="matchCount2">'+Object.keys(rutToCode).length+'</span> alumnos';
+    document.getElementById('step2BannerSub').textContent='Ahora sube el PDF para separar por código.';
+    document.getElementById('modeIndicator').style.borderLeft='3px solid var(--azul2)';
+  } else {
+    document.getElementById('modeIcon').textContent='🎓';
+    document.getElementById('modeName').textContent='Modo DuocUC — Nombre PDF: RUT';
+    document.getElementById('modeDesc').textContent='Sin columna "Codigo" en Hoja1. Los PDFs se nombrarán con el RUT sin puntos ni guiones (ej: 162471724.pdf)';
+    document.getElementById('step2BannerText').innerHTML='RUTs extraídos correctamente — '+Object.keys(rutToCode).length+' alumnos';
+    document.getElementById('step2BannerSub').textContent='Ahora sube el PDF para separar por RUT.';
+    document.getElementById('modeIndicator').style.borderLeft='3px solid var(--amari)';
+  }
+  // Show/hide Excel download buttons (only if Excel was modified)
+  const showExcelBtn = updatedWb !== null;
+  document.getElementById('btnDlExcelCruce').style.display=showExcelBtn?'':'none';
+  document.getElementById('btnDlExcelFinal').style.display=showExcelBtn?'':'none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ============ STEP 2: PDF ============ */
+function onPdfFile(f){
+  if(!f||!f.name.toLowerCase().endsWith('.pdf'))return;
+  pdfFileName=f.name;
+  document.getElementById('dzPdf').classList.add('loaded');
+  document.getElementById('pdfFname').textContent='✓ '+f.name;
+  readBuf(f).then(buf=>{pdfFileData=buf;document.getElementById('btnStep2').disabled=false});
+}
+
+function logP(m,c=''){const b=document.getElementById('logPdf');b.innerHTML+=`<div class="${c}">${m}</div>`;b.scrollTop=b.scrollHeight}
+
+async function runPdfSplit(){
+  const btn=document.getElementById('btnStep2');
+  btn.disabled=true;btn.textContent='⏳ Procesando...';
+  show('pdfProcessing');
+  const pg=document.getElementById('pgPdf');
+  document.getElementById('logPdf').innerHTML='';
+
+  try{
+    logP('📄 Cargando PDF...','lin');
+    pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const bufCopy1=pdfFileData.slice(0);
+    const bufCopy2=pdfFileData.slice(0);
+    const pdf=await pdfjsLib.getDocument({data:bufCopy1}).promise;
+    const pdfDoc=await PDFLib.PDFDocument.load(bufCopy2);
+    logP(`✓ PDF: ${pdf.numPages} páginas`,'lok');
+    logP(`✓ ${Object.keys(rutToCode).length} códigos disponibles desde Excel`,'lok');
+    logP(`📌 Plataforma: ${selectedPlatform==='eclass'?'Eclass (nombre = código)':'DuocUC (nombre = RUT)'}`, 'lin');
+
+    const zip=new JSZip();const res=[];const used={};
+    // Pre-build list of known RUTs for brute-force matching
+    const knownRuts=Object.keys(rutToCode);
+
+    for(let i=0;i<pdf.numPages;i++){
+      pg.style.width=((i+1)/pdf.numPages*100)+'%';
+      const page=await pdf.getPage(i+1);
+      const tc=await page.getTextContent();
+      const txtSpaced=tc.items.map(x=>x.str).join(' ');
+      const txtNoSpace=tc.items.map(x=>x.str).join('');
+      // Strip ALL non-alphanumeric to get pure character stream
+      const txtDigits=txtSpaced.replace(/[^0-9kK]/gi,'');
+
+      let rut=null,cod=null,rutNorm=null;
+
+      // Strategy 1: Flexible regex on spaced text
+      const rx1=/(\d{1,2}\s*\.\s*\d{3}\s*\.\s*\d{3}\s*[\-,]\s*[\dkK])/gi;
+      let m;
+      while((m=rx1.exec(txtSpaced))!==null){
+        const c=normalizeRut(m[1]);
+        if(c.length>=8&&rutToCode[c]){rut=m[1].trim();rutNorm=c;cod=rutToCode[c];break}
+      }
+
+      // Strategy 2: Standard regex on no-space text
+      if(!cod){
+        const rx2=/(\d{1,2}\.\d{3}\.\d{3}[\-][\dkK])/gi;
+        while((m=rx2.exec(txtNoSpace))!==null){
+          const c=normalizeRut(m[1]);
+          if(c.length>=8&&rutToCode[c]){rut=m[1];rutNorm=c;cod=rutToCode[c];break}
+        }
+      }
+
+      // Strategy 3: Brute-force — check if any known RUT exists in the digit stream
+      if(!cod){
+        for(const knownRut of knownRuts){
+          if(txtDigits.includes(knownRut)){
+            rut=knownRut;rutNorm=knownRut;cod=rutToCode[knownRut];break;
+          }
+        }
+      }
+
+      let fn,est;
+      if(cod){
+        // Eclass: nombre = código | DuocUC: nombre = RUT normalizado
+        const baseName = selectedPlatform==='eclass' ? cod : rutNorm;
+        fn=baseName+'.pdf';est='OK';
+      }
+      else{fn='REVISAR_PG'+(i+1)+'.pdf';est='Revisar'}
+
+      if(used[fn]){let c=1;const b=fn.replace('.pdf','');while(used[b+'_'+c+'.pdf'])c++;fn=b+'_'+c+'.pdf'}
+      used[fn]=true;
+
+      const np=await PDFLib.PDFDocument.create();
+      const[cp]=await np.copyPages(pdfDoc,[i]);np.addPage(cp);
+      zip.file(fn,await np.save());
+      res.push({archivo:fn,rut:rut||'N/A',codigo:cod||'N/A',pagina:i+1,estado:est});
+      logP(`  Pág ${i+1}: ${est==='OK'?'✓':'⚠'} ${fn}`,est==='OK'?'lok':'lwa');
+    }
+
+    logP('📦 Generando ZIP...','lin');
+    genZip=await zip.generateAsync({type:'blob'});
+    zipName=pdfFileName.replace('.pdf','')+'_separado.zip';
+
+    const ok=res.filter(r=>r.estado==='OK').length,rev=res.length-ok;
+    logP(`✅ Listo! ${ok} OK, ${rev} para revisar`,'lok');
+
+    // Go to step 3
+    hide('panel2');show('panel3');setStep(3);
+    window.scrollTo({top:0,behavior:'smooth'});
+
+    document.getElementById('statsPdf').innerHTML=`
+      <div class="stat"><div class="stat-n">${res.length}</div><div class="stat-l">Total páginas</div></div>
+      <div class="stat ok"><div class="stat-n">${ok}</div><div class="stat-l">Correctos</div></div>
+      <div class="stat ${rev?'wa':'ok'}"><div class="stat-n">${rev}</div><div class="stat-l">Revisar</div></div>`;
+    document.getElementById('tblPdf').innerHTML=res.map(x=>`<tr>
+      <td><b>${x.archivo}</b></td><td>${x.rut}</td><td>${x.codigo}</td>
+      <td style="text-align:center">${x.pagina}</td>
+      <td><span class="badge ${x.estado==='OK'?'badge-ok':'badge-wa'}">${x.estado}</span></td></tr>`).join('');
+
+  }catch(e){logP('❌ Error: '+e.message,'ler');console.error(e)}
+  btn.disabled=false;btn.textContent='▶ Procesar Certificados';
+}
+
+function downloadZip(){if(genZip)saveAs(genZip,zipName)}
+
+/* ============ RESET ============ */
+function resetAll(){location.reload()}
+</script>
+</body>
+</html>
