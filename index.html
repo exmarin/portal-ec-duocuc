@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+ 
     :root {
       --azul:       #1F4E78;
       --azul-oscuro:#163a5a;
@@ -22,16 +22,16 @@
       --sombra:     0 4px 24px rgba(31,78,120,.10);
       --sombra-hover: 0 12px 40px rgba(31,78,120,.18);
     }
-
+ 
     html { scroll-behavior: smooth; }
-
+ 
     body {
       font-family: 'DM Sans', sans-serif;
       background: var(--gris-bg);
       color: var(--texto);
       min-height: 100vh;
     }
-
+ 
     /* ── HEADER ──────────────────────────────── */
     header {
       background: var(--azul);
@@ -45,24 +45,28 @@
       z-index: 100;
       box-shadow: 0 2px 12px rgba(0,0,0,.18);
     }
-
+ 
     .header-left {
       display: flex;
       align-items: center;
       gap: 14px;
     }
-
+ 
     .logo-badge {
       background: var(--oro);
       color: var(--azul);
       font-weight: 800;
       font-size: 17px;
       letter-spacing: -.5px;
-      padding: 6px 12px;
+      padding: 7px 14px;
       border-radius: 6px;
       line-height: 1;
+      flex-shrink: 0;
     }
-
+ 
+    .logo-badge .duoc { letter-spacing: -.5px; }
+    .logo-badge .uc   { letter-spacing: .5px; }
+ 
     .header-title {
       color: #fff;
       font-size: 15px;
@@ -70,12 +74,12 @@
       letter-spacing: .01em;
       opacity: .92;
     }
-
+ 
     .header-title span {
       color: var(--oro);
       font-weight: 700;
     }
-
+ 
     .header-badge {
       background: rgba(255,184,28,.15);
       border: 1px solid rgba(255,184,28,.35);
@@ -87,7 +91,7 @@
       border-radius: 20px;
       letter-spacing: .04em;
     }
-
+ 
     /* ── HERO ────────────────────────────────── */
     .hero {
       background: linear-gradient(135deg, var(--azul) 0%, var(--azul-claro) 100%);
@@ -95,7 +99,7 @@
       position: relative;
       overflow: hidden;
     }
-
+ 
     .hero::before {
       content: '';
       position: absolute;
@@ -104,7 +108,7 @@
         radial-gradient(circle at 80% 20%, rgba(255,184,28,.12) 0%, transparent 55%),
         radial-gradient(circle at 10% 80%, rgba(255,255,255,.04) 0%, transparent 40%);
     }
-
+ 
     .hero::after {
       content: '';
       position: absolute;
@@ -114,14 +118,14 @@
       background: var(--gris-bg);
       clip-path: ellipse(55% 100% at 50% 100%);
     }
-
+ 
     .hero-inner {
       max-width: 900px;
       margin: 0 auto;
       position: relative;
       z-index: 1;
     }
-
+ 
     .hero-eyebrow {
       display: inline-flex;
       align-items: center;
@@ -138,7 +142,7 @@
       margin-bottom: 22px;
       text-transform: uppercase;
     }
-
+ 
     .hero-eyebrow::before {
       content: '';
       width: 6px; height: 6px;
@@ -146,12 +150,12 @@
       border-radius: 50%;
       animation: pulso 2s infinite;
     }
-
+ 
     @keyframes pulso {
       0%, 100% { opacity: 1; transform: scale(1); }
       50%       { opacity: .5; transform: scale(.7); }
     }
-
+ 
     .hero h1 {
       font-size: 38px;
       font-weight: 700;
@@ -160,77 +164,77 @@
       margin-bottom: 14px;
       letter-spacing: -.02em;
     }
-
+ 
     .hero h1 em {
       font-style: normal;
       color: var(--oro);
     }
-
+ 
     .hero-sub {
       font-size: 15.5px;
       color: rgba(255,255,255,.72);
       max-width: 560px;
       line-height: 1.65;
     }
-
+ 
     .hero-stats {
       display: flex;
       gap: 32px;
       margin-top: 36px;
     }
-
+ 
     .stat {
       display: flex;
       flex-direction: column;
       gap: 2px;
     }
-
+ 
     .stat-num {
       font-size: 28px;
       font-weight: 700;
       color: var(--oro);
       line-height: 1;
     }
-
+ 
     .stat-label {
       font-size: 12px;
       color: rgba(255,255,255,.55);
       letter-spacing: .03em;
     }
-
+ 
     /* ── GRID DE HERRAMIENTAS ─────────────────── */
     .tools-section {
       max-width: 980px;
       margin: 0 auto;
       padding: 50px 40px 80px;
     }
-
+ 
     .section-header {
       display: flex;
       align-items: center;
       gap: 10px;
       margin-bottom: 30px;
     }
-
+ 
     .section-header h2 {
       font-size: 18px;
       font-weight: 600;
       color: var(--azul);
       letter-spacing: -.01em;
     }
-
+ 
     .section-line {
       flex: 1;
       height: 1px;
       background: var(--gris-borde);
     }
-
+ 
     .tools-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
       gap: 22px;
     }
-
+ 
     /* ── CARD ─────────────────────────────────── */
     .card {
       background: #fff;
@@ -245,7 +249,7 @@
       position: relative;
       overflow: hidden;
     }
-
+ 
     .card::before {
       content: '';
       position: absolute;
@@ -255,15 +259,15 @@
       opacity: 0;
       transition: opacity .22s;
     }
-
+ 
     .card:hover {
       transform: translateY(-4px);
       box-shadow: var(--sombra-hover);
       border-color: rgba(31,78,120,.2);
     }
-
+ 
     .card:hover::before { opacity: 1; }
-
+ 
     .card-top {
       display: flex;
       align-items: flex-start;
@@ -271,7 +275,7 @@
       gap: 12px;
       margin-bottom: 14px;
     }
-
+ 
     .card-icon {
       width: 48px; height: 48px;
       border-radius: 12px;
@@ -283,14 +287,14 @@
       flex-shrink: 0;
       border: 1px solid var(--gris-borde);
     }
-
+ 
     .card-meta {
       display: flex;
       flex-direction: column;
       gap: 4px;
       align-items: flex-end;
     }
-
+ 
     .card-tag {
       font-size: 10.5px;
       font-family: 'DM Mono', monospace;
@@ -300,19 +304,19 @@
       padding: 3px 9px;
       border-radius: 20px;
     }
-
+ 
     .tag-excel   { background: #e8f5e9; color: #2e7d32; }
     .tag-pdf     { background: #fce4ec; color: #c62828; }
     .tag-datos   { background: #e3f2fd; color: #1565c0; }
     .tag-sistema { background: #fff3e0; color: #e65100; }
-
+ 
     .card-filename {
       font-size: 10px;
       font-family: 'DM Mono', monospace;
       color: #aab0bb;
       letter-spacing: .02em;
     }
-
+ 
     .card h3 {
       font-size: 17px;
       font-weight: 700;
@@ -321,7 +325,7 @@
       margin-bottom: 8px;
       line-height: 1.3;
     }
-
+ 
     .card-desc {
       font-size: 13.5px;
       color: var(--gris-texto);
@@ -329,14 +333,14 @@
       margin-bottom: 18px;
       flex: 1;
     }
-
+ 
     .card-features {
       display: flex;
       flex-wrap: wrap;
       gap: 6px;
       margin-bottom: 20px;
     }
-
+ 
     .feature-pill {
       font-size: 11px;
       background: var(--gris-bg);
@@ -346,7 +350,7 @@
       border-radius: 20px;
       letter-spacing: .01em;
     }
-
+ 
     .card-btn {
       display: flex;
       align-items: center;
@@ -365,27 +369,27 @@
       transition: background .18s, transform .12s;
       letter-spacing: .01em;
     }
-
+ 
     .card-btn:hover {
       background: var(--azul-oscuro);
       transform: translateY(-1px);
     }
-
+ 
     .card-btn svg {
       transition: transform .18s;
     }
-
+ 
     .card-btn:hover svg {
       transform: translateX(3px);
     }
-
+ 
     /* ── AVISO LOCAL ─────────────────────────── */
     .aviso {
       max-width: 980px;
       margin: 0 auto 0;
       padding: 0 40px 20px;
     }
-
+ 
     .aviso-box {
       background: #fff8e6;
       border: 1px solid #ffd166;
@@ -397,9 +401,9 @@
       font-size: 13px;
       color: #7a5500;
     }
-
+ 
     .aviso-box strong { color: #5a3d00; }
-
+ 
     /* ── FOOTER ──────────────────────────────── */
     footer {
       background: var(--azul);
@@ -409,9 +413,9 @@
       font-size: 12px;
       letter-spacing: .02em;
     }
-
+ 
     footer strong { color: var(--oro); }
-
+ 
     /* ── RESPONSIVE ──────────────────────────── */
     @media (max-width: 680px) {
       header { padding: 0 20px; }
@@ -425,16 +429,16 @@
   </style>
 </head>
 <body>
-
+ 
 <!-- HEADER -->
 <header>
   <div class="header-left">
-    <div class="logo-badge">DuocUC</div>
+    <div class="logo-badge"><span class="duoc">Duoc</span><span class="uc">UC</span></div>
     <span class="header-title"><span>Educación Continua</span> · Coordinación Académica</span>
   </div>
   <div class="header-badge">PORTAL INTERNO v1.0</div>
 </header>
-
+ 
 <!-- HERO -->
 <section class="hero">
   <div class="hero-inner">
@@ -459,7 +463,7 @@
     </div>
   </div>
 </section>
-
+ 
 <!-- AVISO -->
 <div class="aviso">
   <div class="aviso-box">
@@ -467,16 +471,16 @@
     <span><strong>Privacidad garantizada:</strong> ningún archivo se sube a internet. Todo el procesamiento ocurre directamente en tu navegador.</span>
   </div>
 </div>
-
+ 
 <!-- HERRAMIENTAS -->
 <section class="tools-section">
   <div class="section-header">
     <h2>Herramientas disponibles</h2>
     <div class="section-line"></div>
   </div>
-
+ 
   <div class="tools-grid">
-
+ 
     <!-- SISTEMA GC -->
     <div class="card">
       <div class="card-top">
@@ -501,7 +505,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
-
+ 
     <!-- CRUZADOR -->
     <div class="card">
       <div class="card-top">
@@ -521,12 +525,12 @@
         <span class="feature-pill">Normalización RUT</span>
         <span class="feature-pill">% de match</span>
       </div>
-      <a href="cruzador_datos.html" class="card-btn">
+      <a href="cruzador.html" class="card-btn">
         Abrir herramienta
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
-
+ 
     <!-- GENERADOR DJ -->
     <div class="card">
       <div class="card-top">
@@ -551,39 +555,39 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
-
-    <!-- VALIDADOR RUT -->
+ 
+    <!-- SISTEMA CERTIFICADOS -->
     <div class="card">
       <div class="card-top">
-        <div class="card-icon">✅</div>
+        <div class="card-icon">🎓</div>
         <div class="card-meta">
-          <span class="card-tag tag-excel">Excel</span>
-          <span class="card-filename">validador_rut_pro.html</span>
+          <span class="card-tag tag-pdf">PDF / Excel</span>
+          <span class="card-filename">sistema_certificados_final.html</span>
         </div>
       </div>
-      <h3>Validador de RUT</h3>
+      <h3>Sistema de Gestión de Certificados</h3>
       <p class="card-desc">
-        Valida RUTs desde un archivo Excel en 3 capas: dígito verificador matemático, consulta al SII, y análisis con IA. Detecta RUTs ficticios, mal formateados o con nombre incorrecto.
+        Gestiona el envío y seguimiento de certificados de diplomados. Procesa listados de alumnos, valida datos y genera reportes de estado para el control del proceso de certificación.
       </p>
       <div class="card-features">
+        <span class="feature-pill">Carga PDF</span>
         <span class="feature-pill">Carga Excel</span>
-        <span class="feature-pill">Validación DV</span>
-        <span class="feature-pill">Consulta SII</span>
-        <span class="feature-pill">Análisis IA</span>
+        <span class="feature-pill">Seguimiento</span>
+        <span class="feature-pill">Export ZIP</span>
       </div>
-      <a href="validador_rut_pro.html" class="card-btn">
+      <a href="sistema_certificados_final.html" class="card-btn">
         Abrir herramienta
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
-
+ 
   </div>
 </section>
-
+ 
 <!-- FOOTER -->
 <footer>
   © 2026 <strong>DuocUC Educación Continua</strong> · Desarrollado por Coordinación Académica
 </footer>
-
+ 
 </body>
 </html>
