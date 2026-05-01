@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cruzador de Datos — Duoc UC Educación Continua</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --primary: #1F4E78;
+    --primary-light: #2a6a9e;
+    --accent: #FFB81C;
+    --accent-hover: #e6a518;
+    --bg: #f3f5f8;
+    --card: #ffffff;
+    --text: #1a1a2e;
+    --text-muted: #6b7280;
+    --border: #e2e6ec;
+    --success: #16a34a;
+    --success-bg: #dcfce7;
+    --warn: #d97706;
+    --warn-bg: #fef3c7;
+    --error: #dc2626;
+    --error-bg: #fee2e2;
+    --tag-bg: #eef2f7;
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(31,78,120,0.08);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--primary);
+    padding: 20px 32px;
+    display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 4px 20px rgba(31,78,120,0.25);
+    border-bottom: 3px solid var(--accent);
+  }
+  header h1 { color: #fff; font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+
+  .footer {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(31,78,120,0.96);
+    backdrop-filter: blur(6px);
+    border-top: 2px solid var(--accent);
+    padding: 8px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    z-index: 50;
+  }
+  .footer-left { display: flex; align-items: center; gap: 10px; }
+  .footer-logo { font-family: Arial; font-weight: 900; font-size: 13px; }
+  .footer-logo span:first-child { color: var(--accent); }
+  .footer-logo span:last-child { color: #fff; }
+  .footer-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.2); }
+  .footer-text { font-size: 11px; color: rgba(255,255,255,0.55); }
+  .footer-right { font-size: 11px; color: rgba(255,255,255,0.4); }
+
+  .container { max-width: 960px; margin: 0 auto; padding: 28px 24px 80px; }
+
+  /* Steps */
+  .steps { display: flex; gap: 0; margin-bottom: 28px; }
+  .step-item {
+    flex: 1; display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px; background: var(--card); border: 2px solid var(--border);
+    transition: all .25s;
+  }
+  .step-item:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .step-item:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+  .step-item:not(:last-child) { border-right: none; }
+  .step-item.active { border-color: var(--primary); background: #edf4fa; }
+  .step-item.done { border-color: var(--success); background: var(--success-bg); }
+  .step-num {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--border); color: var(--text-muted);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .step-item.active .step-num { background: var(--primary); color: #fff; }
+  .step-item.done .step-num { background: var(--success); color: #fff; }
+  .step-label { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .step-item.active .step-label { color: var(--primary); }
+  .step-item.done .step-label { color: var(--success); }
+
+  /* Cards */
+  .card {
+    background: var(--card); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 28px; margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; color: var(--primary); }
+  .card p.desc { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.5; }
+
+  /* Upload boxes */
+  .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media(max-width:700px) { .upload-grid { grid-template-columns: 1fr; } }
+
+  .upload-box {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 28px 16px; text-align: center; cursor: pointer;
+    transition: all .2s; position: relative; min-height: 160px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .upload-box:hover, .upload-box.dragover { border-color: var(--accent); background: #fffcf0; }
+  .upload-box.loaded { border-color: var(--success); border-style: solid; background: var(--success-bg); cursor: default; }
+  .upload-box input { display: none; }
+  .upload-box .icon { font-size: 32px; margin-bottom: 6px; }
+  .upload-box .box-label { font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+  .upload-box .box-hint { font-size: 12px; color: var(--text-muted); }
+  .upload-box .file-info {
+    font-size: 12px; font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted); margin-top: 6px;
+  }
+  .upload-box .sheet-sel {
+    margin-top: 8px; padding: 5px 10px; border: 1px solid var(--border);
+    border-radius: 6px; font-family: inherit; font-size: 12px;
+    background: #fff; cursor: pointer;
+  }
+  .upload-box .remove-file {
+    position: absolute; top: 8px; right: 8px;
+    background: var(--error-bg); border: none; border-radius: 50%;
+    width: 24px; height: 24px; cursor: pointer; font-size: 14px;
+    color: var(--error); display: flex; align-items: center; justify-content: center;
+  }
+  .upload-box .remove-file:hover { background: var(--error); color: #fff; }
+
+  /* Config */
+  .config-section { margin-top: 18px; }
+  .config-section > label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .config-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:700px) { .config-row { grid-template-columns: 1fr; } }
+
+  select {
+    width: 100%; padding: 10px 12px; border: 2px solid var(--border);
+    border-radius: 8px; font-family: inherit; font-size: 14px;
+    background: #fff; color: var(--text); cursor: pointer; appearance: none;
+  }
+  select:focus { outline: none; border-color: var(--primary); }
+
+  /* Key preview */
+  .key-preview {
+    margin-top: 14px; padding: 12px 14px;
+    background: #f0f6fb; border-radius: 8px; border: 1px solid #d4e3f0;
+  }
+  .key-preview label {
+    font-size: 11px; font-weight: 600; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .key-preview .kp-row {
+    margin-top: 6px; font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .key-preview .kp-row strong { font-family: 'DM Sans', sans-serif; }
+  .kp-val {
+    display: inline-block; background: #fff; padding: 2px 7px;
+    border-radius: 4px; margin: 2px 3px 2px 0;
+  }
+  .kp-match { border: 1px solid var(--success); }
+  .kp-nomatch { border: 1px solid var(--error); opacity: 0.7; }
+
+  /* Join options */
+  .join-options { display: flex; gap: 10px; margin-top: 8px; }
+  .join-opt {
+    flex: 1; padding: 12px 14px; border: 2px solid var(--border);
+    border-radius: 8px; cursor: pointer; transition: all .2s; text-align: center;
+  }
+  .join-opt:hover { border-color: var(--primary); }
+  .join-opt.selected { border-color: var(--primary); background: #edf4fa; }
+  .join-opt strong { display: block; font-size: 13px; margin-bottom: 2px; }
+  .join-opt span { font-size: 11px; color: var(--text-muted); }
+
+  /* Column picker */
+  .col-picker {
+    border: 2px solid var(--border); border-radius: 8px;
+    max-height: 220px; overflow-y: auto; padding: 8px;
+  }
+  .col-picker label {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+  }
+  .col-picker label:hover { background: var(--tag-bg); }
+  .col-picker input[type=checkbox] { accent-color: var(--primary); width: 16px; height: 16px; }
+  .col-source {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: var(--text-muted); margin-left: auto; white-space: nowrap;
+  }
+  .col-picker .col-group-header {
+    font-size: 11px; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    padding: 8px 8px 4px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  }
+
+  /* Alert boxes */
+  .alert {
+    padding: 10px 14px; border-radius: 8px; font-size: 13px;
+    margin-top: 12px; display: flex; align-items: flex-start; gap: 8px;
+  }
+  .alert-warn { background: var(--warn-bg); color: var(--warn); border: 1px solid #fcd34d; }
+  .alert-error { background: var(--error-bg); color: var(--error); border: 1px solid #fca5a5; }
+  .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid #86efac; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 24px; border: none; border-radius: 8px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-primary { background: var(--accent); color: var(--primary); }
+  .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+  .btn-primary:disabled { background: #ddd; color: #999; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--primary); color: #fff; }
+  .btn-secondary:hover { background: var(--primary-light); }
+  .btn-outline { background: transparent; border: 2px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+  /* Results table */
+  .table-wrap {
+    overflow-x: auto; border-radius: 8px; border: 1px solid var(--border);
+    max-height: 420px; overflow-y: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { position: sticky; top: 0; z-index: 2; }
+  th {
+    background: var(--primary); color: #fff; padding: 10px 12px;
+    text-align: left; font-weight: 600; white-space: nowrap;
+  }
+  td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border);
+    white-space: nowrap; max-width: 250px; overflow: hidden; text-overflow: ellipsis;
+  }
+  tr:nth-child(even) { background: #f9fafb; }
+  tr:hover { background: #eef2f7; }
+
+  .stats-bar { display: flex; gap: 20px; padding: 14px 0; flex-wrap: wrap; }
+  .stat { font-size: 13px; color: var(--text-muted); }
+  .stat strong { font-family: 'JetBrains Mono', monospace; color: var(--primary); font-size: 15px; }
+
+  .hidden { display: none !important; }
+
+  .toast {
+    position: fixed; bottom: 60px; right: 24px;
+    background: var(--primary); color: #fff;
+    padding: 12px 20px; border-radius: 8px;
+    font-size: 13px; font-weight: 500;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+    animation: toastIn .3s ease; z-index: 100;
+  }
+  .toast.error { background: var(--error); }
+  .toast.warn { background: var(--warn); }
+  @keyframes toastIn { from { opacity:0; transform:translateY(20px); } }
+  @keyframes slideIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Help button */
+  .btn-help {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    color: #fff; padding: 7px 16px; border-radius: 8px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .2s;
+  }
+  .btn-help:hover { background: rgba(255,255,255,0.25); }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px; animation: fadeIn .2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; } }
+  .modal {
+    background: #fff; border-radius: 14px; max-width: 620px; width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+    animation: modalIn .25s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform:scale(0.95) translateY(10px); } }
+  .modal-header {
+    background: var(--primary); color: #fff; padding: 18px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 3px solid var(--accent);
+  }
+  .modal-header h3 { font-size: 16px; font-weight: 700; }
+  .modal-close {
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    width: 32px; height: 32px; border-radius: 8px; font-size: 18px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.3); }
+  .modal-body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+  .modal-body h4 { font-size: 14px; font-weight: 700; color: var(--primary); margin: 16px 0 8px; }
+  .modal-body h4:first-child { margin-top: 0; }
+  .modal-body p { font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 8px; }
+  .modal-body .step-list { padding-left: 0; list-style: none; counter-reset: steps; }
+  .modal-body .step-list li {
+    counter-increment: steps; font-size: 13px; line-height: 1.6;
+    padding: 8px 12px 8px 42px; position: relative; margin-bottom: 4px;
+    background: var(--tag-bg); border-radius: 8px;
+  }
+  .modal-body .step-list li::before {
+    content: counter(steps);
+    position: absolute; left: 10px; top: 8px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--primary); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .privacy-box {
+    background: #edf7ed; border: 1px solid #86efac; border-radius: 10px;
+    padding: 14px 16px; margin-top: 16px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .privacy-box .shield { font-size: 28px; flex-shrink: 0; }
+  .privacy-box p { margin: 0; font-size: 13px; line-height: 1.5; color: #166534; }
+  .privacy-box strong { color: #15803d; }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:rgba(255,255,255,.6);font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.15);transition:all .2s;margin-right:6px" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,.6)'">← Portal</a>
+  <svg width="100" height="26" viewBox="0 0 100 26">
+    <text x="0" y="20" font-family="Arial" font-weight="900" font-size="20" fill="#FFB81C">Duoc</text>
+    <text x="55" y="20" font-family="Arial" font-weight="900" font-size="20" fill="white">UC</text>
+  </svg>
+  <div style="width:1px;height:24px;background:rgba(255,255,255,0.2);"></div>
+  <div style="display:flex;flex-direction:column;">
+    <h1>Cruzador de Datos</h1>
+    <span style="color:rgba(255,255,255,0.55);font-size:11px;font-weight:400;margin-top:1px;">Educación Continua · Cruce de Excel</span>
+  </div>
+  <div style="margin-left:auto;">
+    <button class="btn-help" onclick="document.getElementById('helpModal').classList.remove('hidden')">❓ Ayuda</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="steps">
+    <div class="step-item active" id="s1"><div class="step-num">1</div><div class="step-label">Cargar Archivos</div></div>
+    <div class="step-item" id="s2"><div class="step-num">2</div><div class="step-label">Configurar Cruce</div></div>
+    <div class="step-item" id="s3"><div class="step-num">3</div><div class="step-label">Resultados</div></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div id="panel1">
+    <div class="card">
+      <h2>📁 Cargar dos archivos Excel</h2>
+      <p class="desc">Carga el archivo base (el que quieres enriquecer) y el archivo de consulta (de donde se extraerán datos). Si un archivo tiene múltiples hojas, podrás elegir cuál usar.</p>
+      <div class="upload-grid">
+        <div class="upload-box" id="box1" onclick="document.getElementById('input1').click()">
+          <input type="file" id="input1" accept=".xlsx,.xls,.csv">
+          <div class="icon">📋</div>
+          <div class="box-label">ARCHIVO BASE</div>
+          <div class="box-hint">El archivo principal a enriquecer</div>
+        </div>
+        <div class="upload-box" id="box2" onclick="document.getElementById('input2').click()">
+          <input type="file" id="input2" accept=".xlsx,.xls,.csv">
+          <div class="icon">🔍</div>
+          <div class="box-label">ARCHIVO DE CONSULTA</div>
+          <div class="box-hint">Desde donde se traen datos</div>
+        </div>
+      </div>
+      <div id="uploadAlerts"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btnToStep2" disabled>Continuar a configuración →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div id="panel2" class="hidden">
+    <div class="card">
+      <h2>🔗 Configurar el cruce</h2>
+      <p class="desc">Selecciona la columna clave en cada archivo (el campo en común para buscar coincidencias) y las columnas que deseas agregar al resultado.</p>
+
+      <div class="config-section">
+        <label>Columna clave de cruce</label>
+        <div class="config-row">
+          <div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">📋 Archivo Base: <strong id="nameBase"></strong></div>
+            <select id="selKeyBase" onchange="updatePreview()"></select>
+          </div>
+          <div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">🔍 Archivo Consulta: <strong id="nameConsulta"></strong></div>
+            <select id="selKeyConsulta" onchange="updatePreview()"></select>
+          </div>
+        </div>
+      </div>
+
+      <div class="key-preview" id="keyPreviewBox">
+        <label>🔍 Vista previa de claves (primeros 5 valores)</label>
+        <div id="keyPreview"></div>
+        <div id="matchReport"></div>
+      </div>
+
+      <div class="config-section">
+        <label>Tipo de cruce</label>
+        <div class="join-options">
+          <div class="join-opt selected" data-join="left" onclick="selectJoin(this)">
+            <strong>Mantener base completa</strong>
+            <span>Todos los registros del base + datos de consulta donde haya coincidencia</span>
+          </div>
+          <div class="join-opt" data-join="inner" onclick="selectJoin(this)">
+            <strong>Solo coincidencias</strong>
+            <span>Solo registros que existan en ambos archivos</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <label>Columnas a incluir en el resultado</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button class="btn btn-outline btn-sm" onclick="toggleAllCols(true)">✅ Seleccionar todo</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleAllCols(false)">⬜ Deseleccionar todo</button>
+        </div>
+        <div class="col-picker" id="colPicker"></div>
+      </div>
+
+      <div id="configAlerts"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goStep(1)">← Volver</button>
+        <button class="btn btn-primary" id="btnCruzar">⚡ Ejecutar cruce</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div id="panel3" class="hidden">
+    <div class="card">
+      <h2>📋 Resultado del cruce</h2>
+      <div class="stats-bar" id="statsBar"></div>
+      <div id="resultAlerts"></div>
+      <div class="table-wrap" id="tableWrap"></div>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="goStep(2)">← Reconfigurar</button>
+        <button class="btn btn-secondary" id="btnExport">📥 Descargar Excel</button>
+        <button class="btn btn-outline" onclick="location.reload()">🔄 Nuevo cruce</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay hidden" id="helpModal" onclick="if(event.target===this)this.classList.add('hidden')">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>❓ ¿Cómo funciona el Cruzador de Datos?</h3>
+      <button class="modal-close" onclick="document.getElementById('helpModal').classList.add('hidden')">×</button>
+    </div>
+    <div class="modal-body">
+      <h4>¿Qué hace esta herramienta?</h4>
+      <p>El Cruzador de Datos permite combinar información de dos archivos Excel diferentes usando una columna en común (como RUT, CIN, ID, código, correo, etc.). Es equivalente a hacer un BUSCARV en Excel, pero de forma visual, automática y sin fórmulas.</p>
+
+      <h4>¿Cómo se usa?</h4>
+      <ol class="step-list">
+        <li><strong>Cargar archivos:</strong> Sube el archivo base (el que quieres enriquecer con más datos) y el archivo de consulta (de donde se extraerán los datos). Si un archivo tiene múltiples hojas, podrás elegir cuál usar.</li>
+        <li><strong>Configurar el cruce:</strong> Selecciona la columna clave en cada archivo (el campo que tienen en común). El sistema te mostrará una vista previa con colores indicando si hay coincidencias. Luego elige qué columnas quieres incluir en el resultado final.</li>
+        <li><strong>Obtener resultados:</strong> Revisa la tabla resultante con las estadísticas del cruce. Si todo está correcto, descarga el archivo Excel con los datos combinados.</li>
+      </ol>
+
+      <h4>Tipos de cruce disponibles</h4>
+      <p><strong>Mantener base completa:</strong> Conserva todos los registros del archivo base. Donde haya coincidencia con el archivo de consulta, se agregan los datos; donde no, las columnas de consulta quedan vacías.</p>
+      <p><strong>Solo coincidencias:</strong> Muestra únicamente los registros que existan en ambos archivos.</p>
+
+      <h4>Notas importantes</h4>
+      <p>• La comparación de claves es flexible: ignora puntos, guiones y espacios (ej: "12.345.678-9" coincide con "123456789").</p>
+      <p>• Si hay valores duplicados en la clave del archivo de consulta, se usa la primera coincidencia encontrada.</p>
+      <p>• Se pueden procesar archivos con hasta 100.000 filas sin problemas.</p>
+
+      <div class="privacy-box">
+        <div class="shield">🔒</div>
+        <div>
+          <p><strong>Privacidad y seguridad de los datos</strong></p>
+          <p>Todos los archivos se procesan <strong>100% en tu navegador</strong>. Ningún archivo ni dato es cargado, enviado o almacenado en internet ni en servidores externos. Tu información permanece completamente local y privada en tu equipo. Al cerrar o recargar la página, todos los datos se eliminan de la memoria.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-left">
+    <div class="footer-logo"><span>Duoc</span> <span>UC</span></div>
+    <div class="footer-sep"></div>
+    <span class="footer-text">Educación Continua &nbsp;·&nbsp; Cruzador de Datos</span>
+  </div>
+  <div class="footer-right">© 2026 DuocUC Educación Continua &nbsp;·&nbsp; Desarrollado por Coordinación Académica</div>
+</div>
+
+<script>
+// ── State ──
+let fileBase = null;   // { name, wb, sheetNames, activeSheet, headers, data }
+let fileConsulta = null;
+let resultData = [];
+let resultHeaders = [];
+
+// ── Helpers ──
+function normalizeKey(val) {
+  if (val === null || val === undefined || val === '') return '';
+  let s = String(val).trim();
+  // Remove dots, dashes, spaces for flexible matching (RUT, IDs, etc)
+  s = s.replace(/[\.\-\s]/g, '').toLowerCase();
+  // Remove leading zeros for numeric-only strings
+  if (/^\d+$/.test(s)) s = s.replace(/^0+/, '') || '0';
+  return s;
+}
+
+function parseSheet(wb, sheetName) {
+  const ws = wb.Sheets[sheetName];
+  if (!ws) return null;
+  const json = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  if (!json.length) return null;
+  const headers = Object.keys(json[0]);
+  const data = json.map(r => headers.map(h => r[h]));
+  return { headers, data };
+}
+
+function toast(msg, type) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (type === 'error' ? ' error' : type === 'warn' ? ' warn' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+// ── File Loading ──
+function setupUploadBox(boxId, inputId, target) {
+  const box = document.getElementById(boxId);
+  const input = document.getElementById(inputId);
+
+  box.addEventListener('dragover', e => { e.preventDefault(); if (!box.classList.contains('loaded')) box.classList.add('dragover'); });
+  box.addEventListener('dragleave', () => box.classList.remove('dragover'));
+  box.addEventListener('drop', e => {
+    e.preventDefault(); box.classList.remove('dragover');
+    if (box.classList.contains('loaded')) return;
+    if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0], target);
+  });
+  input.addEventListener('change', e => {
+    if (e.target.files.length) loadFile(e.target.files[0], target);
+  });
+}
+
+function loadFile(file, target) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) { toast('Formato no soportado', 'error'); return; }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const sheetNames = wb.SheetNames;
+      const parsed = parseSheet(wb, sheetNames[0]);
+      if (!parsed) { toast('Archivo o hoja vacía', 'error'); return; }
+
+      const obj = { name: file.name, wb, sheetNames, activeSheet: sheetNames[0], headers: parsed.headers, data: parsed.data };
+
+      if (target === 'base') fileBase = obj;
+      else fileConsulta = obj;
+
+      renderBox(target);
+      checkReady();
+      checkDuplicates(target);
+    } catch (err) {
+      toast('Error leyendo archivo: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function renderBox(target) {
+  const f = target === 'base' ? fileBase : fileConsulta;
+  const boxId = target === 'base' ? 'box1' : 'box2';
+  const box = document.getElementById(boxId);
+  if (!f) {
+    box.classList.remove('loaded');
+    box.innerHTML = `
+      <input type="file" id="${target === 'base' ? 'input1' : 'input2'}" accept=".xlsx,.xls,.csv">
+      <div class="icon">${target === 'base' ? '📋' : '🔍'}</div>
+      <div class="box-label">${target === 'base' ? 'ARCHIVO BASE' : 'ARCHIVO DE CONSULTA'}</div>
+      <div class="box-hint">${target === 'base' ? 'El archivo principal a enriquecer' : 'Desde donde se traen datos'}</div>
+    `;
+    box.onclick = () => document.getElementById(target === 'base' ? 'input1' : 'input2').click();
+    setupUploadBox(boxId, target === 'base' ? 'input1' : 'input2', target);
+    return;
+  }
+
+  box.classList.add('loaded');
+  box.onclick = null;
+
+  const sheetSel = f.sheetNames.length > 1
+    ? `<select class="sheet-sel" onchange="changeSheet('${target}', this.value)">${f.sheetNames.map(s => `<option ${s === f.activeSheet ? 'selected' : ''}>${s}</option>`).join('')}</select>`
+    : `<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">📋 ${f.activeSheet}</div>`;
+
+  box.innerHTML = `
+    <button class="remove-file" onclick="removeFile('${target}')" title="Quitar">×</button>
+    <div class="icon">✅</div>
+    <div class="box-label">${target === 'base' ? 'ARCHIVO BASE' : 'ARCHIVO DE CONSULTA'}</div>
+    <div style="font-size:13px;font-weight:500;margin-top:4px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.name}</div>
+    <div class="file-info">${f.headers.length} columnas · ${f.data.length.toLocaleString()} filas</div>
+    ${sheetSel}
+  `;
+}
+
+function changeSheet(target, sheetName) {
+  const f = target === 'base' ? fileBase : fileConsulta;
+  const parsed = parseSheet(f.wb, sheetName);
+  if (!parsed) { toast('Hoja vacía: ' + sheetName, 'error'); return; }
+  f.activeSheet = sheetName;
+  f.headers = parsed.headers;
+  f.data = parsed.data;
+  renderBox(target);
+  checkDuplicates(target);
+}
+
+function removeFile(target) {
+  if (target === 'base') fileBase = null;
+  else fileConsulta = null;
+  renderBox(target);
+  checkReady();
+  document.getElementById('uploadAlerts').innerHTML = '';
+}
+
+function checkReady() {
+  document.getElementById('btnToStep2').disabled = !(fileBase && fileConsulta);
+}
+
+function checkDuplicates(target) {
+  const f = target === 'base' ? fileBase : fileConsulta;
+  if (!f) return;
+  // Check all columns for potential key duplicates
+  const alertsDiv = document.getElementById('uploadAlerts');
+  const totalRows = f.data.length;
+  // Quick duplicate check on first column that looks like an ID
+  const idxs = f.headers.map((h, i) => i);
+  let dupeMsg = '';
+  for (const i of idxs) {
+    const vals = f.data.map(r => normalizeKey(r[i])).filter(v => v);
+    const unique = new Set(vals).size;
+    if (unique < vals.length && unique > 0) {
+      const dupes = vals.length - unique;
+      dupeMsg += `<div class="alert alert-warn">⚠️ <strong>${f.name}</strong> → columna "${f.headers[i]}" tiene ${dupes} valores duplicados (${vals.length} filas, ${unique} únicos). Si usas esta columna como clave, solo se tomará la primera coincidencia.</div>`;
+      break; // Only show first one found
+    }
+  }
+  if (dupeMsg) alertsDiv.innerHTML = dupeMsg;
+}
+
+// ── Steps ──
+function goStep(n) {
+  document.querySelectorAll('.step-item').forEach((el, i) => {
+    el.classList.remove('active', 'done');
+    if (i < n - 1) el.classList.add('done');
+    if (i === n - 1) el.classList.add('active');
+  });
+  document.getElementById('panel1').classList.toggle('hidden', n !== 1);
+  document.getElementById('panel2').classList.toggle('hidden', n !== 2);
+  document.getElementById('panel3').classList.toggle('hidden', n !== 3);
+  if (n === 2) buildConfig();
+}
+
+document.getElementById('btnToStep2').addEventListener('click', () => goStep(2));
+
+// ── Config ──
+function buildConfig() {
+  document.getElementById('nameBase').textContent = fileBase.name;
+  document.getElementById('nameConsulta').textContent = fileConsulta.name;
+
+  const selBase = document.getElementById('selKeyBase');
+  const selConsulta = document.getElementById('selKeyConsulta');
+  selBase.innerHTML = fileBase.headers.map(h => `<option value="${h}">${h}</option>`).join('');
+  selConsulta.innerHTML = fileConsulta.headers.map(h => `<option value="${h}">${h}</option>`).join('');
+
+  // Auto-select matching header name if exists
+  const commonHeader = fileBase.headers.find(h => fileConsulta.headers.map(x => x.toLowerCase()).includes(h.toLowerCase()));
+  if (commonHeader) {
+    selBase.value = commonHeader;
+    const match = fileConsulta.headers.find(h => h.toLowerCase() === commonHeader.toLowerCase());
+    if (match) selConsulta.value = match;
+  }
+
+  buildColPicker();
+  updatePreview();
+}
+
+function buildColPicker() {
+  const picker = document.getElementById('colPicker');
+  picker.innerHTML = '';
+
+  // Base columns
+  let html = `<div class="col-group-header">📋 Archivo Base — ${fileBase.name}</div>`;
+  fileBase.headers.forEach(h => {
+    html += `<label><input type="checkbox" checked data-src="base" data-col="${h}"> ${h}</label>`;
+  });
+
+  // Consulta columns
+  html += `<div class="col-group-header" style="margin-top:8px;">🔍 Archivo Consulta — ${fileConsulta.name}</div>`;
+  fileConsulta.headers.forEach(h => {
+    html += `<label><input type="checkbox" checked data-src="consulta" data-col="${h}"> ${h}</label>`;
+  });
+
+  picker.innerHTML = html;
+}
+
+function toggleAllCols(state) {
+  document.querySelectorAll('#colPicker input[type=checkbox]').forEach(c => c.checked = state);
+}
+
+function updatePreview() {
+  const baseKey = document.getElementById('selKeyBase').value;
+  const consultaKey = document.getElementById('selKeyConsulta').value;
+  const baseKeyIdx = fileBase.headers.indexOf(baseKey);
+  const consultaKeyIdx = fileConsulta.headers.indexOf(consultaKey);
+
+  const baseVals = fileBase.data.slice(0, 5).map(r => r[baseKeyIdx]);
+  const consultaVals = fileConsulta.data.slice(0, 5).map(r => r[consultaKeyIdx]);
+
+  // Build lookup of normalized consulta keys for match check
+  const consultaNormSet = new Set(fileConsulta.data.map(r => normalizeKey(r[consultaKeyIdx])));
+  const baseNormSet = new Set(fileBase.data.map(r => normalizeKey(r[baseKeyIdx])));
+
+  let html = `<div class="kp-row"><strong>📋 Base [${baseKey}]:</strong> `;
+  html += baseVals.map(v => {
+    const norm = normalizeKey(v);
+    const match = consultaNormSet.has(norm);
+    return `<span class="kp-val ${match ? 'kp-match' : 'kp-nomatch'}">${v}</span>`;
+  }).join('');
+  html += '</div>';
+
+  html += `<div class="kp-row"><strong>🔍 Consulta [${consultaKey}]:</strong> `;
+  html += consultaVals.map(v => {
+    const norm = normalizeKey(v);
+    const match = baseNormSet.has(norm);
+    return `<span class="kp-val ${match ? 'kp-match' : 'kp-nomatch'}">${v}</span>`;
+  }).join('');
+  html += '</div>';
+
+  document.getElementById('keyPreview').innerHTML = html;
+
+  // Full match report
+  let totalBase = fileBase.data.length;
+  let matches = 0;
+  fileBase.data.forEach(r => {
+    if (consultaNormSet.has(normalizeKey(r[baseKeyIdx]))) matches++;
+  });
+  const pct = totalBase > 0 ? Math.round(matches / totalBase * 100) : 0;
+
+  let reportClass = pct >= 80 ? 'alert-success' : pct >= 30 ? 'alert-warn' : 'alert-error';
+  let reportIcon = pct >= 80 ? '✅' : pct >= 30 ? '⚠️' : '❌';
+  document.getElementById('matchReport').innerHTML = `
+    <div class="alert ${reportClass}" style="margin-top:10px;">
+      ${reportIcon} <strong>${matches.toLocaleString()}</strong> de <strong>${totalBase.toLocaleString()}</strong> registros del archivo base tienen coincidencia en consulta (<strong>${pct}%</strong>).
+      ${pct === 0 ? ' Verifica que las columnas clave sean las correctas.' : ''}
+    </div>
+  `;
+}
+
+function selectJoin(el) {
+  document.querySelectorAll('.join-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── Execute ──
+document.getElementById('btnCruzar').addEventListener('click', executeMerge);
+
+function executeMerge() {
+  const baseKey = document.getElementById('selKeyBase').value;
+  const consultaKey = document.getElementById('selKeyConsulta').value;
+  const joinType = document.querySelector('.join-opt.selected').dataset.join;
+
+  // Selected columns
+  const selectedCols = [];
+  document.querySelectorAll('#colPicker input:checked').forEach(cb => {
+    selectedCols.push({ src: cb.dataset.src, col: cb.dataset.col });
+  });
+  if (!selectedCols.length) { toast('Selecciona al menos una columna', 'error'); return; }
+
+  // Build consulta lookup
+  const consultaKeyIdx = fileConsulta.headers.indexOf(consultaKey);
+  const consultaMap = new Map();
+  let consultaDupes = 0;
+  fileConsulta.data.forEach(row => {
+    const k = normalizeKey(row[consultaKeyIdx]);
+    if (!k) return;
+    if (consultaMap.has(k)) { consultaDupes++; return; } // first wins
+    consultaMap.set(k, row);
+  });
+
+  // Build result
+  const baseKeyIdx = fileBase.headers.indexOf(baseKey);
+  resultHeaders = selectedCols.map(c => c.col);
+  // Deduplicate headers
+  const hCount = {};
+  resultHeaders = resultHeaders.map(h => {
+    hCount[h] = (hCount[h] || 0) + 1;
+    return hCount[h] > 1 ? h + ' (consulta)' : h;
+  });
+
+  resultData = [];
+  let matchCount = 0;
+  let emptyKeyCount = 0;
+
+  fileBase.data.forEach(baseRow => {
+    const k = normalizeKey(baseRow[baseKeyIdx]);
+    if (!k) { emptyKeyCount++; return; }
+
+    const consultaRow = consultaMap.get(k);
+    const hasMatch = !!consultaRow;
+
+    if (joinType === 'inner' && !hasMatch) return;
+    if (hasMatch) matchCount++;
+
+    const outRow = selectedCols.map(c => {
+      if (c.src === 'base') {
+        return baseRow[fileBase.headers.indexOf(c.col)];
+      } else {
+        if (!consultaRow) return '';
+        return consultaRow[fileConsulta.headers.indexOf(c.col)];
+      }
+    });
+    resultData.push(outRow);
+  });
+
+  // Render results
+  renderResults(matchCount, emptyKeyCount, consultaDupes);
+  goStep(3);
+}
+
+function renderResults(matchCount, emptyKeyCount, consultaDupes) {
+  const total = resultData.length;
+  const stats = document.getElementById('statsBar');
+  stats.innerHTML = `
+    <div class="stat">Total filas resultado: <strong>${total.toLocaleString()}</strong></div>
+    <div class="stat">Coincidencias: <strong>${matchCount.toLocaleString()}</strong></div>
+    <div class="stat">Columnas: <strong>${resultHeaders.length}</strong></div>
+  `;
+
+  // Alerts
+  const alerts = document.getElementById('resultAlerts');
+  let alertHtml = '';
+  if (emptyKeyCount > 0) {
+    alertHtml += `<div class="alert alert-warn">⚠️ Se omitieron ${emptyKeyCount} filas del archivo base con clave vacía.</div>`;
+  }
+  if (consultaDupes > 0) {
+    alertHtml += `<div class="alert alert-warn">⚠️ Se encontraron ${consultaDupes} duplicados en el archivo de consulta (se usó la primera coincidencia).</div>`;
+  }
+  if (matchCount === 0) {
+    alertHtml += `<div class="alert alert-error">❌ No se encontraron coincidencias. Verifica que las columnas clave seleccionadas sean las correctas.</div>`;
+  }
+  alerts.innerHTML = alertHtml;
+
+  // Table
+  const preview = resultData.slice(0, 500);
+  const table = document.getElementById('tableWrap');
+  table.innerHTML = `
+    <table>
+      <thead><tr>${resultHeaders.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+      <tbody>${preview.map(r => `<tr>${r.map(c => `<td title="${String(c)}">${c}</td>`).join('')}</tr>`).join('')}</tbody>
+    </table>
+    ${resultData.length > 500 ? `<p style="padding:10px;font-size:12px;color:var(--text-muted);text-align:center;">Mostrando 500 de ${resultData.length.toLocaleString()} filas. Descarga el Excel para ver todo.</p>` : ''}
+  `;
+}
+
+// ── Export ──
+document.getElementById('btnExport').addEventListener('click', () => {
+  const wsData = [resultHeaders, ...resultData];
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = resultHeaders.map((h, i) => {
+    let max = h.length;
+    resultData.slice(0, 100).forEach(r => { max = Math.max(max, String(r[i] || '').length); });
+    return { wch: Math.min(max + 2, 40) };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Cruce');
+  XLSX.writeFile(wb, 'cruce_resultado.xlsx');
+  toast('Excel descargado ✓');
+});
+
+// ── Init ──
+setupUploadBox('box1', 'input1', 'base');
+setupUploadBox('box2', 'input2', 'consulta');
+</script>
+
+</body>
+</html>

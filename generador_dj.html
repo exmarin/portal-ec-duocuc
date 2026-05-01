@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Declaraciones Juradas v2.3 — DuocUC EC</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  :root {
+    --azul: #1F4E78;
+    --azul-light: #2a6099;
+    --oro: #FFB81C;
+    --oro-light: #ffd06b;
+    --gris: #f4f6f8;
+    --gris-borde: #dde3ea;
+    --texto: #1a2733;
+    --texto-suave: #5a6a7a;
+    --verde: #27ae60;
+    --rojo: #e74c3c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Barlow', sans-serif;
+    background: var(--gris);
+    color: var(--texto);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--azul);
+    border-bottom: 4px solid var(--oro);
+    padding: 0 32px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo-svg { display: flex; align-items: center; gap: 2px; }
+  .logo-svg .duoc { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: var(--oro); letter-spacing: -1px; }
+  .logo-svg .uc { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; color: #fff; }
+  .header-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.25); }
+  .header-title { color: rgba(255,255,255,0.9); font-size: 15px; font-weight: 500; letter-spacing: 0.02em; }
+  .header-badge { margin-left: auto; background: rgba(255,184,28,0.15); border: 1px solid rgba(255,184,28,0.4); color: var(--oro); font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* ── MAIN ── */
+  main { flex: 1; max-width: 860px; width: 100%; margin: 40px auto; padding: 0 24px; }
+
+  /* ── PRIVACY NOTICE ── */
+  .privacy-notice {
+    background: #e8f4fd;
+    border: 1px solid #b3d4f0;
+    border-left: 4px solid var(--azul);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    color: #2c5282;
+  }
+  .privacy-notice svg { flex-shrink: 0; margin-top: 1px; }
+
+  /* ── STEPS ── */
+  .steps-track { display: flex; align-items: center; gap: 0; margin-bottom: 36px; }
+  .step-node { display: flex; align-items: center; gap: 10px; flex: 1; }
+  .step-node:last-child { flex: 0; }
+  .step-circle {
+    width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--gris-borde);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: var(--texto-suave);
+    background: #fff; flex-shrink: 0; transition: all .3s;
+  }
+  .step-circle.active { border-color: var(--azul); background: var(--azul); color: #fff; }
+  .step-circle.done { border-color: var(--verde); background: var(--verde); color: #fff; }
+  .step-label { font-size: 12px; font-weight: 600; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.04em; transition: color .3s; white-space: nowrap; }
+  .step-label.active { color: var(--azul); }
+  .step-label.done { color: var(--verde); }
+  .step-connector { flex: 1; height: 2px; background: var(--gris-borde); margin: 0 8px; transition: background .3s; }
+  .step-connector.done { background: var(--verde); }
+
+  /* ── CARDS ── */
+  .card {
+    background: #fff;
+    border: 1px solid var(--gris-borde);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .card.visible { display: block; }
+  .card-header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--gris-borde); }
+  .card-number { width: 40px; height: 40px; background: var(--azul); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .card-number.done { background: var(--verde); }
+  .card-title { font-size: 18px; font-weight: 700; color: var(--azul); }
+  .card-subtitle { font-size: 13px; color: var(--texto-suave); margin-top: 2px; }
+
+  /* ── DROP ZONE ── */
+  .dropzone {
+    border: 2px dashed var(--gris-borde);
+    border-radius: 10px;
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--gris);
+  }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--azul); background: #eaf0f8; }
+  .dropzone.loaded { border-color: var(--verde); border-style: solid; background: #f0faf4; }
+  .dropzone-icon { font-size: 36px; margin-bottom: 10px; }
+  .dropzone-label { font-size: 14px; font-weight: 600; color: var(--texto); margin-bottom: 4px; }
+  .dropzone-hint { font-size: 12px; color: var(--texto-suave); }
+  .dropzone input[type="file"] { display: none; }
+  .dropzone-status { font-size: 13px; font-weight: 600; margin-top: 8px; }
+  .dropzone-status.ok { color: var(--verde); }
+  .dropzone-status.err { color: var(--rojo); }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 24px; border-radius: 8px; border: none; cursor: pointer;
+    font-family: 'Barlow', sans-serif; font-size: 14px; font-weight: 600;
+    transition: all .2s; letter-spacing: 0.02em;
+  }
+  .btn-primary { background: var(--azul); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: var(--azul-light); }
+  .btn-gold { background: var(--oro); color: var(--azul); }
+  .btn-gold:hover:not(:disabled) { background: var(--oro-light); }
+  .btn-outline { background: transparent; color: var(--azul); border: 2px solid var(--azul); }
+  .btn-outline:hover:not(:disabled) { background: var(--azul); color: #fff; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* ── LOADER ── */
+  .loader-wrap { display: flex; align-items: center; gap: 14px; padding: 18px; background: #f0f4f8; border-radius: 8px; margin-top: 16px; }
+  .spinner { width: 22px; height: 22px; border: 3px solid var(--gris-borde); border-top-color: var(--azul); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text { font-size: 13px; color: var(--texto-suave); font-weight: 500; }
+
+  /* ── DATA REVIEW ── */
+  .data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .field-group label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-suave); margin-bottom: 5px; }
+  .field-group input {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--gris-borde); border-radius: 7px;
+    font-family: 'Barlow', sans-serif; font-size: 14px; color: var(--texto);
+    transition: border-color .2s;
+  }
+  .field-group input:focus { outline: none; border-color: var(--azul); box-shadow: 0 0 0 3px rgba(31,78,120,0.1); }
+  .field-full { grid-column: 1/-1; }
+
+  /* ── PARTICIPANT TABLE ── */
+  .section-label { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--azul); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .badge-count { background: var(--azul); color: #fff; border-radius: 20px; padding: 2px 10px; font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--azul); color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; font-size: 12px; letter-spacing: 0.03em; }
+  thead th:first-child { border-radius: 7px 0 0 0; }
+  thead th:last-child { border-radius: 0 7px 0 0; }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:hover { background: #eaf0f8; }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--gris-borde); }
+  tbody td input { border: none; background: transparent; font-family: 'Barlow', sans-serif; font-size: 13px; width: 100%; color: var(--texto); }
+  tbody td input:focus { outline: 1px solid var(--azul); border-radius: 3px; }
+  .td-num { color: var(--texto-suave); font-weight: 600; width: 36px; text-align: center; }
+
+  /* ── RESULTS ── */
+  .result-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; background: #f8fafc; border: 1px solid var(--gris-borde);
+    border-radius: 8px; margin-bottom: 8px;
+  }
+  .result-name { font-size: 14px; font-weight: 600; }
+  .result-rut { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+  .result-dl { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--azul); color: #fff; border-radius: 6px; font-size: 12px; font-weight: 600; text-decoration: none; cursor: pointer; transition: background .2s; }
+  .result-dl:hover { background: var(--azul-light); }
+  .result-dl.success { background: var(--verde); }
+  .zip-row { margin-top: 16px; padding: 16px; background: linear-gradient(135deg, var(--azul) 0%, var(--azul-light) 100%); border-radius: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .zip-info { color: #fff; }
+  .zip-info strong { display: block; font-size: 15px; margin-bottom: 3px; }
+  .zip-info span { font-size: 12px; opacity: .8; }
+
+  /* ── ALERT ── */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+  .alert.error { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; display: block; }
+  .alert.success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; display: block; }
+
+  /* ── HEADER BUTTONS ── */
+  .header-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer;
+    font-family: 'Barlow', sans-serif; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase; transition: all .2s;
+    white-space: nowrap;
+  }
+  .header-btn-help { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25); }
+  .header-btn-help:hover { background: rgba(255,255,255,0.22); }
+  .header-btn-reset { background: rgba(231,76,60,0.18); color: #ffb3ae; border: 1px solid rgba(231,76,60,0.35); }
+  .header-btn-reset:hover { background: rgba(231,76,60,0.32); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(15,30,50,0.65); backdrop-filter: blur(3px);
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: #fff; border-radius: 14px; width: 100%; max-width: 620px;
+    max-height: 88vh; overflow-y: auto; margin: 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+    animation: modalIn .22s ease;
+  }
+  @keyframes modalIn { from { opacity:0; transform:translateY(-16px) scale(.97); } to { opacity:1; transform:none; } }
+  .modal-header {
+    background: var(--azul); border-radius: 14px 14px 0 0;
+    padding: 22px 28px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header-title { color: #fff; font-size: 17px; font-weight: 700; }
+  .modal-header-sub { color: rgba(255,255,255,0.65); font-size: 12px; margin-top: 3px; }
+  .modal-close {
+    background: rgba(255,255,255,0.15); border: none; color: #fff;
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    font-size: 18px; display: flex; align-items: center; justify-content: center;
+    transition: background .2s; flex-shrink: 0;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.28); }
+  .modal-body { padding: 28px; }
+
+  .help-step {
+    display: flex; gap: 16px; margin-bottom: 22px; align-items: flex-start;
+  }
+  .help-step:last-child { margin-bottom: 0; }
+  .help-num {
+    width: 36px; height: 36px; background: var(--azul); color: #fff;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+  .help-content h3 { font-size: 14px; font-weight: 700; color: var(--azul); margin-bottom: 5px; }
+  .help-content p { font-size: 13px; color: var(--texto-suave); line-height: 1.6; }
+  .help-content code {
+    background: #f0f4f8; color: var(--azul); padding: 1px 6px;
+    border-radius: 4px; font-family: 'Courier New', monospace; font-size: 12px;
+  }
+  .help-divider { border: none; border-top: 1px solid var(--gris-borde); margin: 20px 0; }
+  .help-marcadores {
+    background: #f8fafc; border: 1px solid var(--gris-borde); border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .help-marcadores h4 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--texto-suave); margin-bottom: 10px; }
+  .marcador-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; font-size: 13px; }
+  .marcador-row:last-child { margin-bottom: 0; }
+  .tag { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 4px; padding: 2px 8px; font-family: 'Courier New', monospace; font-size: 12px; white-space: nowrap; }
+  .arrow { color: var(--gris-borde); font-size: 16px; }
+  .val { color: var(--texto-suave); font-size: 12px; }
+
+  /* ── REINICIAR BANNER ── */
+  .reset-confirm {
+    display: none; position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+    z-index: 200; background: #fff; border: 1px solid var(--gris-borde);
+    border-radius: 10px; padding: 16px 22px; box-shadow: 0 8px 28px rgba(0,0,0,0.15);
+    min-width: 300px; text-align: center;
+  }
+  .reset-confirm.open { display: block; }
+  .reset-confirm p { font-size: 14px; font-weight: 600; color: var(--texto); margin-bottom: 14px; }
+  .reset-confirm-btns { display: flex; gap: 8px; justify-content: center; }
+
+  /* ── VISOR DE DOCUMENTOS ── */
+  .preview-section {
+    display: none;
+    margin-top: 28px;
+    border-top: 2px solid var(--gris-borde);
+    padding-top: 24px;
+  }
+  .preview-section.visible { display: block; }
+
+  .preview-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--azul); border-radius: 10px 10px 0 0;
+    padding: 12px 18px; gap: 12px;
+  }
+  .preview-nav-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
+    color: #fff; border-radius: 7px; padding: 7px 16px; cursor: pointer;
+    font-family: 'Barlow', sans-serif; font-size: 13px; font-weight: 600;
+    transition: background .2s; display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  .preview-nav-btn:hover:not(:disabled) { background: rgba(255,255,255,0.28); }
+  .preview-nav-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  .preview-info { text-align: center; flex: 1; min-width: 0; }
+  .preview-participant-name {
+    color: #fff; font-size: 14px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .preview-counter {
+    color: rgba(255,255,255,0.6); font-size: 11px; font-weight: 500;
+    margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  .preview-page-wrap {
+    background: #6b7280;
+    padding: 24px 20px;
+    border-radius: 0 0 10px 10px;
+    min-height: 300px;
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    position: relative;
+  }
+  .preview-loading {
+    position: absolute; inset: 0; display: flex; align-items: center;
+    justify-content: center; gap: 12px; color: #fff; font-size: 13px;
+    font-weight: 600; border-radius: 0 0 10px 10px;
+    background: rgba(50,60,70,0.7);
+  }
+  .preview-loading.hidden { display: none; }
+
+  .preview-page {
+    background: #fff;
+    width: 100%; max-width: 680px;
+    min-height: 480px;
+    border-radius: 3px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+    padding: 52px 60px;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 13.5px;
+    line-height: 1.8;
+    color: #111;
+    word-wrap: break-word;
+  }
+
+  /* Mammoth output styles */
+  .preview-page p { margin: 0 0 10px 0; }
+  .preview-page p:last-child { margin-bottom: 0; }
+  .preview-page strong, .preview-page b { font-weight: bold; }
+  .preview-page em, .preview-page i { font-style: italic; }
+  .preview-page table {
+    border-collapse: collapse; width: 100%;
+    margin: 16px auto; display: table;
+  }
+  .preview-page td, .preview-page th {
+    border: 1px solid #ccc; padding: 6px 12px; text-align: center;
+  }
+  .preview-page h1,
+  .preview-page h2 { text-align: center; font-size: 13.5px; font-weight: bold; margin: 0 0 8px 0; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--azul);
+    color: rgba(255,255,255,0.6);
+    text-align: center;
+    font-size: 11px;
+    padding: 14px 24px;
+    margin-top: auto;
+    letter-spacing: 0.03em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="index.html" style="display:flex;align-items:center;gap:8px;text-decoration:none;color:rgba(255,255,255,.6);font-size:12px;font-weight:500;padding:4px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.15);transition:all .2s;margin-right:6px" onmouseover="this.style.background='rgba(255,255,255,.1)';this.style.color='#fff'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,.6)'">← Portal</a>
+  <svg width="100" height="26" viewBox="0 0 100 26">
+    <text x="0" y="20" font-family="Arial" font-weight="900" font-size="20" fill="#FFB81C">Duoc</text>
+    <text x="55" y="20" font-family="Arial" font-weight="900" font-size="20" fill="white">UC</text>
+  </svg>
+  <div class="header-divider"></div>
+  <span class="header-title">Educación Continua — Coordinación Académica</span>
+  <span class="header-badge" style="margin-left:auto">Franquicia SENCE</span>
+  <div class="header-divider"></div>
+  <button class="header-btn header-btn-help" onclick="openHelp()">
+    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    Ayuda
+  </button>
+  <button class="header-btn header-btn-reset" onclick="confirmReset()">
+    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Reiniciar
+  </button>
+</header>
+
+<main>
+
+  <div class="privacy-notice">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#2c5282" stroke-width="2"/><path d="M12 8v4M12 16h.01" stroke="#2c5282" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Todo se procesa <strong>100% localmente en tu navegador</strong>. Los archivos nunca se suben a internet ni se envían a ningún servidor externo.</span>
+  </div>
+
+  <!-- STEP TRACKER -->
+  <div class="steps-track">
+    <div class="step-node">
+      <div class="step-circle active" id="sc1">1</div>
+      <div class="step-label active" id="sl1">PDF OTIC</div>
+    </div>
+    <div class="step-connector" id="conn1"></div>
+    <div class="step-node">
+      <div class="step-circle" id="sc2">2</div>
+      <div class="step-label" id="sl2">Plantilla</div>
+    </div>
+    <div class="step-connector" id="conn2"></div>
+    <div class="step-node">
+      <div class="step-circle" id="sc3">3</div>
+      <div class="step-label" id="sl3">Revisar</div>
+    </div>
+    <div class="step-connector" id="conn3"></div>
+    <div class="step-node">
+      <div class="step-circle" id="sc4">4</div>
+      <div class="step-label" id="sl4">Generar</div>
+    </div>
+  </div>
+
+  <!-- CARD 1: PDF -->
+  <div class="card visible" id="card1">
+    <div class="card-header">
+      <div class="card-number" id="cn1">1</div>
+      <div>
+        <div class="card-title">Subir PDF de inscripción OTIC</div>
+        <div class="card-subtitle">Carta de Inscripción de Participantes emitida por OTIC SOFOFA u otra OTIC</div>
+      </div>
+    </div>
+
+    <div class="dropzone" id="dz1" onclick="document.getElementById('pdfInput').click()">
+      <input type="file" id="pdfInput" accept=".pdf" onchange="handlePdfSelect(this)">
+      <div class="dropzone-icon">📄</div>
+      <div class="dropzone-label">Haz clic o arrastra el PDF aquí</div>
+      <div class="dropzone-hint">Solo archivos .pdf</div>
+      <div class="dropzone-status" id="pdfStatus"></div>
+    </div>
+
+    <div id="pdfLoader" style="display:none" class="loader-wrap">
+      <div class="spinner"></div>
+      <div class="loader-text" id="pdfLoaderText">Leyendo PDF...</div>
+    </div>
+    <div class="alert" id="pdfAlert"></div>
+  </div>
+
+  <!-- CARD 2: TEMPLATE -->
+  <div class="card" id="card2">
+    <div class="card-header">
+      <div class="card-number" id="cn2">2</div>
+      <div>
+        <div class="card-title">Subir plantilla Word (Modelo_DJ.docx)</div>
+        <div class="card-subtitle">El documento Word con los marcadores de posición a reemplazar</div>
+      </div>
+    </div>
+
+    <div class="dropzone" id="dz2" onclick="document.getElementById('docxInput').click()">
+      <input type="file" id="docxInput" accept=".docx" onchange="handleDocxSelect(this)">
+      <div class="dropzone-icon">📝</div>
+      <div class="dropzone-label">Haz clic o arrastra el .docx aquí</div>
+      <div class="dropzone-hint">Solo archivos .docx — Modelo_DJ.docx</div>
+      <div class="dropzone-status" id="docxStatus"></div>
+    </div>
+    <div class="alert" id="docxAlert"></div>
+  </div>
+
+  <!-- CARD 3: REVIEW -->
+  <div class="card" id="card3">
+    <div class="card-header">
+      <div class="card-number" id="cn3">3</div>
+      <div>
+        <div class="card-title">Revisar datos extraídos</div>
+        <div class="card-subtitle">Verifica y corrige si es necesario antes de generar</div>
+      </div>
+    </div>
+
+    <div class="data-grid">
+      <div class="field-group field-full">
+        <label>Nombre del Curso</label>
+        <input type="text" id="f_curso" placeholder="Nombre del curso">
+      </div>
+      <div class="field-group">
+        <label>Código SENCE</label>
+        <input type="text" id="f_sence" placeholder="1238078900">
+      </div>
+      <div class="field-group">
+        <label>ID de Acción</label>
+        <input type="text" id="f_accion" placeholder="6790322">
+      </div>
+      <div class="field-group">
+        <label>Fecha de Inicio</label>
+        <input type="text" id="f_inicio" placeholder="14.04.2026">
+      </div>
+      <div class="field-group">
+        <label>Fecha de Término</label>
+        <input type="text" id="f_termino" placeholder="30.04.2026">
+      </div>
+    </div>
+
+    <div class="section-label">
+      Participantes <span class="badge-count" id="partCount">0</span>
+    </div>
+    <table id="partTable">
+      <thead>
+        <tr>
+          <th class="td-num">N°</th>
+          <th>RUT</th>
+          <th>Nombre Completo</th>
+        </tr>
+      </thead>
+      <tbody id="partBody"></tbody>
+    </table>
+
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="generateAll()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 2v10m0 0l-3-3m3 3l3-3M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Generar Declaraciones Juradas
+      </button>
+      <button class="btn btn-outline" onclick="addRow()">+ Agregar participante</button>
+    </div>
+
+    <div id="genLoader" style="display:none" class="loader-wrap">
+      <div class="spinner"></div>
+      <div class="loader-text">Generando documentos...</div>
+    </div>
+  </div>
+
+  <!-- CARD 4: RESULTS -->
+  <div class="card" id="card4">
+    <div class="card-header">
+      <div class="card-number done" id="cn4">✓</div>
+      <div>
+        <div class="card-title">Documentos generados</div>
+        <div class="card-subtitle">Descarga individual o todos como ZIP</div>
+      </div>
+    </div>
+
+    <div id="resultList"></div>
+
+    <div class="zip-row" id="zipRow" style="display:none">
+      <div class="zip-info">
+        <strong id="zipTitle">Todos los documentos listos</strong>
+        <span id="zipSubtitle"></span>
+      </div>
+      <button class="btn btn-gold" onclick="downloadZip()">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M12 2v10m0 0l-3-3m3 3l3-3M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Descargar ZIP
+      </button>
+    </div>
+
+    <!-- VISOR DE DOCUMENTOS -->
+    <div class="preview-section" id="previewSection">
+      <div class="section-label" style="margin-bottom:14px">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+        Vista previa
+      </div>
+      <div class="preview-toolbar">
+        <button class="preview-nav-btn" id="prevBtn" onclick="previewNav(-1)" disabled>
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Anterior
+        </button>
+        <div class="preview-info">
+          <div class="preview-participant-name" id="previewName">—</div>
+          <div class="preview-counter" id="previewCounter">1 de 1</div>
+        </div>
+        <button class="preview-nav-btn" id="nextBtn" onclick="previewNav(1)" disabled>
+          Siguiente
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="preview-page-wrap">
+        <div class="preview-loading" id="previewLoading">
+          <div class="spinner" style="border-top-color:#fff"></div>
+          <span>Cargando vista previa...</span>
+        </div>
+        <div class="preview-page" id="previewContent"></div>
+      </div>
+    </div>
+
+  </div><!-- /card4 -->
+
+</main>
+
+<!-- ── MODAL AYUDA ── -->
+<div class="modal-overlay" id="helpModal" onclick="closeHelpOutside(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <div class="modal-header-title">¿Cómo funciona este sistema?</div>
+        <div class="modal-header-sub">Generador de Declaraciones Juradas — Franquicia SENCE</div>
+      </div>
+      <button class="modal-close" onclick="closeHelp()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="help-step">
+        <div class="help-num">1</div>
+        <div class="help-content">
+          <h3>Subir el PDF de inscripción OTIC</h3>
+          <p>Carga la <strong>Carta de Inscripción de Participantes</strong> emitida por la OTIC (ej. OTIC SOFOFA). El sistema lee el PDF localmente y extrae automáticamente el nombre del curso, código SENCE, fechas y la nómina completa de participantes.</p>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="help-num">2</div>
+        <div class="help-content">
+          <h3>Subir la plantilla Word</h3>
+          <p>Carga el archivo <code>Modelo_DJ.docx</code>. Este documento debe contener los siguientes <strong>marcadores de texto</strong> que serán reemplazados automáticamente:</p>
+          <div class="help-marcadores" style="margin-top:10px">
+            <h4>Marcadores en la plantilla</h4>
+            <div class="marcador-row"><span class="tag">Nombre completo</span><span class="arrow">→</span><span class="val">Nombre del participante</span></div>
+            <div class="marcador-row"><span class="tag">Rut,</span><span class="arrow">→</span><span class="val">RUT individual (ej. 21874113-4,)</span></div>
+            <div class="marcador-row"><span class="tag">Nombre del curso</span><span class="arrow">→</span><span class="val">Nombre completo del curso</span></div>
+            <div class="marcador-row"><span class="tag">CODIGO SENCE</span><span class="arrow">→</span><span class="val">Código SENCE extraído del PDF</span></div>
+            <div class="marcador-row"><span class="tag">fecha de inicio</span><span class="arrow">→</span><span class="val">Fecha de inicio (DD.MM.YYYY)</span></div>
+            <div class="marcador-row"><span class="tag">fecha de termino</span><span class="arrow">→</span><span class="val">Fecha de término (DD.MM.YYYY)</span></div>
+            <div class="marcador-row"><span class="tag">Nombre y rut</span><span class="arrow">→</span><span class="val">Firma: nombre + RUT</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="help-num">3</div>
+        <div class="help-content">
+          <h3>Revisar y corregir los datos</h3>
+          <p>Antes de generar, puedes editar cualquier campo: nombre del curso, fechas, o los datos de cada participante. También puedes <strong>agregar participantes manualmente</strong> con el botón correspondiente.</p>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="help-num">4</div>
+        <div class="help-content">
+          <h3>Generar y descargar</h3>
+          <p>El sistema genera un archivo <code>.docx</code> por cada participante. Puedes descargarlos uno a uno o todos juntos como un <strong>archivo ZIP</strong>. Todo el proceso ocurre en tu navegador, sin conexión a internet.</p>
+        </div>
+      </div>
+
+      <hr class="help-divider">
+      <p style="font-size:12px; color:var(--texto-suave); text-align:center;">
+        🔒 Todos los archivos se procesan 100% localmente. Ningún dato sale de tu equipo.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ── CONFIRMAR REINICIO ── -->
+<div class="reset-confirm" id="resetConfirm">
+  <p>¿Reiniciar el proceso? Se perderán los datos actuales.</p>
+  <div class="reset-confirm-btns">
+    <button class="btn btn-outline" style="padding:8px 18px;font-size:13px" onclick="closeResetConfirm()">Cancelar</button>
+    <button class="btn btn-primary" style="padding:8px 18px;font-size:13px;background:var(--rojo)" onclick="doReset()">Sí, reiniciar</button>
+  </div>
+</div>
+
+<footer>© 2026 DuocUC Educación Continua · Desarrollado por Coordinación Académica · <strong style="color:var(--oro)">v2.3</strong></footer>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let state = {
+  pdfText: null,
+  templateBuffer: null,
+  courseData: {},
+  participants: [],
+  generatedBlobs: []
+};
+
+// ── DRAG & DROP ──
+['dz1','dz2'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('dragover'); });
+  el.addEventListener('dragleave', () => el.classList.remove('dragover'));
+  el.addEventListener('drop', e => {
+    e.preventDefault(); el.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    if (id === 'dz1' && file.name.endsWith('.pdf')) handlePdfFile(file);
+    else if (id === 'dz2' && file.name.endsWith('.docx')) handleDocxFile(file);
+  });
+});
+
+// ── PDF ──
+function handlePdfSelect(input) { if (input.files[0]) handlePdfFile(input.files[0]); }
+
+async function handlePdfFile(file) {
+  setStatus('pdfStatus', '');
+  showAlert('pdfAlert', '');
+  document.getElementById('pdfLoader').style.display = 'flex';
+  document.getElementById('pdfLoaderText').textContent = 'Leyendo PDF...';
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    state.pdfText = text;
+    document.getElementById('pdfLoaderText').textContent = 'Extrayendo datos del documento...';
+    const parsed = extractWithParser(text);
+    state.courseData = parsed;
+    state.participants = parsed.participantes || [];
+    populateForm(parsed);
+    document.getElementById('pdfLoader').style.display = 'none';
+    document.getElementById('dz1').classList.add('loaded');
+    setStatus('pdfStatus', `✓ ${file.name} — ${state.participants.length} participante(s) encontrado(s)`, 'ok');
+    stepDone(1);
+    showCard(2);
+  } catch(err) {
+    document.getElementById('pdfLoader').style.display = 'none';
+    showAlert('pdfAlert', 'Error al procesar el PDF: ' + err.message, 'error');
+    console.error(err);
+  }
+}
+
+function extractWithParser(text) {
+  const result = {};
+
+  // ── Nombre del curso ──
+  const cursoMatch = text.match(/Nombre del Curso\s*:\s*([^\n:]{10,}?)(?=\s{2,}|Código|$)/i)
+    || text.match(/denominado\s+["""](.+?)["""]/i);
+  result.nombreCurso = cursoMatch ? cursoMatch[1].trim() : '';
+
+  // ── Código SENCE ──
+  const senceMatch = text.match(/[CcóÓ]digo\s+SENCE\s*[:\s]+(\d{7,12})/i)
+    || text.match(/SENCE\s*[:\s]+(\d{7,12})/);
+  result.codigoSENCE = senceMatch ? senceMatch[1].trim() : '';
+
+  // ── ID de Acción (en texto de la DJ si aplica) ──
+  const accionMatch = text.match(/[Aa]cci[oó]n\s+N[°o]\s*([\d]+)/);
+  result.idAccion = accionMatch ? accionMatch[1].trim() : '';
+
+  // ── Fechas ──
+  const inicioMatch = text.match(/[Ff]echa\s+de\s+[Ii]nicio\s*[:\s]+(\d{2}[./]\d{2}[./]\d{4})/);
+  result.fechaInicio = inicioMatch ? inicioMatch[1].replace(/\//g,'.') : '';
+
+  const terminoMatch = text.match(/[Ff]echa\s+de\s+[Tt][eé]rmino\s*[:\s]+(\d{2}[./]\d{2}[./]\d{4})/);
+  result.fechaTermino = terminoMatch ? terminoMatch[1].replace(/\//g,'.') : '';
+
+  // ── Participantes: líneas con patrón "NNN RUT Nombre 100" ──
+  const partRegex = /\b(\d{3})\s+([\d]{7,8}-[\dkK])\s+([A-ZÁÉÍÓÚÜÑ][a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]+?)\s+100\b/g;
+  const participantes = [];
+  let m;
+  while ((m = partRegex.exec(text)) !== null) {
+    const nombre = m[3].trim();
+    const rut = m[2].trim();
+    if (nombre.length > 3) participantes.push({ nombre, rut });
+  }
+
+  // Fallback: buscar RUTs con nombre en líneas sueltas si el regex principal no encontró nada
+  if (participantes.length === 0) {
+    const lineRegex = /([\d]{7,8}-[\dkK])\s+([A-ZÁÉÍÓÚÜÑ][a-záéíóúüñA-ZÁÉÍÓÚÜÑ\s]{5,40})/g;
+    while ((m = lineRegex.exec(text)) !== null) {
+      const rut = m[1].trim();
+      const nombre = m[2].trim();
+      if (!participantes.find(p => p.rut === rut)) participantes.push({ nombre, rut });
+    }
+  }
+
+  result.participantes = participantes;
+  return result;
+}
+
+function populateForm(d) {
+  document.getElementById('f_curso').value = d.nombreCurso || '';
+  document.getElementById('f_sence').value = d.codigoSENCE || '';
+  document.getElementById('f_accion').value = d.idAccion || '';
+  document.getElementById('f_inicio').value = d.fechaInicio || '';
+  document.getElementById('f_termino').value = d.fechaTermino || '';
+  renderParticipants(d.participantes || []);
+}
+
+function renderParticipants(list) {
+  const tbody = document.getElementById('partBody');
+  tbody.innerHTML = '';
+  list.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-num">${String(i+1).padStart(3,'0')}</td>
+      <td><input type="text" value="${p.rut || ''}" placeholder="12345678-9" data-idx="${i}" data-field="rut"></td>
+      <td><input type="text" value="${p.nombre || ''}" placeholder="Nombre Completo" data-idx="${i}" data-field="nombre"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('partCount').textContent = list.length;
+  // Live sync inputs → state
+  tbody.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      const idx = parseInt(inp.dataset.idx);
+      const field = inp.dataset.field;
+      if (!state.participants[idx]) state.participants[idx] = {};
+      state.participants[idx][field] = inp.value;
+    });
+  });
+}
+
+function addRow() {
+  state.participants.push({ nombre: '', rut: '' });
+  renderParticipants(state.participants);
+}
+
+// ── DOCX TEMPLATE ──
+function handleDocxSelect(input) { if (input.files[0]) handleDocxFile(input.files[0]); }
+
+async function handleDocxFile(file) {
+  showAlert('docxAlert', '');
+  try {
+    state.templateBuffer = await file.arrayBuffer();
+    document.getElementById('dz2').classList.add('loaded');
+    setStatus('docxStatus', `✓ ${file.name} cargado`, 'ok');
+    stepDone(2);
+    showCard(3);
+    stepActive(3);
+  } catch(err) {
+    showAlert('docxAlert', 'Error al leer el .docx: ' + err.message, 'error');
+  }
+}
+
+// ── GENERATE ──
+async function generateAll() {
+  if (!state.templateBuffer) { alert('Primero carga la plantilla Word.'); return; }
+  const curso = document.getElementById('f_curso').value.trim();
+  const sence = document.getElementById('f_sence').value.trim();
+  const inicio = document.getElementById('f_inicio').value.trim();
+  const termino = document.getElementById('f_termino').value.trim();
+
+  // Sync participants from table
+  document.querySelectorAll('#partBody input').forEach(inp => {
+    const idx = parseInt(inp.dataset.idx);
+    if (!state.participants[idx]) state.participants[idx] = {};
+    state.participants[idx][inp.dataset.field] = inp.value;
+  });
+
+  const parts = state.participants.filter(p => p.nombre && p.rut);
+  if (!parts.length) { alert('No hay participantes válidos.'); return; }
+
+  document.getElementById('genLoader').style.display = 'flex';
+  state.generatedBlobs = [];
+
+  try {
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      const blob = await generateDocx(p, { curso, sence, inicio, termino });
+      state.generatedBlobs.push({ blob, nombre: p.nombre, rut: p.rut, idx: i });
+    }
+    document.getElementById('genLoader').style.display = 'none';
+    renderResults(state.generatedBlobs);
+    stepDone(3); stepActive(4); stepDone(4);
+    showCard(4);
+    // Iniciar vista previa en el primer documento
+    document.getElementById('previewSection').classList.add('visible');
+    renderPreview(0);
+  } catch(err) {
+    document.getElementById('genLoader').style.display = 'none';
+    alert('Error generando documentos: ' + err.message);
+    console.error(err);
+  }
+}
+
+// Escapa caracteres especiales XML para evitar XML inválido
+function escXml(str) {
+  return (str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Reemplazo seguro: usa split/join en vez de regex para evitar
+// problemas con $ en nombres o rutas de reemplazo especiales
+function reemplazar(xml, buscar, valor) {
+  return xml.split(buscar).join(valor);
+}
+
+async function generateDocx(participant, course) {
+  const zip = await JSZip.loadAsync(state.templateBuffer.slice(0));
+  const xmlFile = zip.file('word/document.xml');
+  if (!xmlFile) throw new Error('Plantilla inválida: no tiene word/document.xml');
+  let xml = await xmlFile.async('string');
+
+  const nombre = escXml(participant.nombre);
+  const rut    = escXml(participant.rut);
+  const curso  = escXml(course.curso);
+  const sence  = escXml(course.sence);
+
+  xml = reemplazar(xml, 'Nombre completo', nombre);
+  xml = reemplazar(xml, ' Rut, ',          ' ' + rut + ', ');
+  xml = reemplazar(xml, 'Rut,',            rut + ',');          // fallback sin espacios
+  xml = reemplazar(xml, 'Nombre del curso', curso);
+  xml = reemplazar(xml, 'CODIGO SENCE',    sence);
+  xml = reemplazar(xml, 'fecha de inicio', course.inicio);
+  xml = reemplazar(xml, 'fecha de termino', course.termino);
+
+  // ── Firma: reemplaza "Nombre y rut" como bloque ──
+  xml = reemplazar(xml, 'Nombre y rut ', nombre + ' / ' + rut + ' ');
+  xml = reemplazar(xml, 'Nombre y rut',  nombre + ' / ' + rut);
+
+  // ── Fallback: plantilla con "Nombre" y "Rut" en nodos separados ──
+  // A esta altura "Nombre completo" y "Nombre del curso" ya fueron reemplazados,
+  // así que ">Nombre<" y ">Rut<" solo pueden aparecer en la firma.
+  const sigFirma = [
+    ['>Nombre<',   '>' + nombre + '<'],
+    ['>Nombre <',  '>' + nombre + ' <'],
+    ['>rut<',      '>' + rut + '<'],
+    ['>rut <',     '>' + rut + ' <'],
+    ['>Rut<',      '>' + rut + '<'],   // ← capital R
+    ['>Rut <',     '>' + rut + ' <'],  // ← capital R con espacio
+    ['>y rut<',    '>' + rut + '<'],
+    ['>y Rut<',    '>' + rut + '<'],
+  ];
+  for (const [buscar, reemplazo] of sigFirma) {
+    if (xml.includes(buscar)) xml = xml.split(buscar).join(reemplazo);
+  }
+
+  zip.file('word/document.xml', xml);
+
+  // ── Verificación: detecta marcadores que quedaron sin reemplazar ──
+  const marcadoresPendientes = [
+    'Nombre completo', 'Nombre del curso', 'CODIGO SENCE',
+    'fecha de inicio', 'fecha de termino', 'Nombre y rut', '>Nombre<', '>rut<'
+  ].filter(m => xml.includes(m));
+  if (marcadoresPendientes.length > 0) {
+    console.warn('⚠️ Marcadores sin reemplazar en', participant.nombre, ':', marcadoresPendientes);
+  }
+
+  return await zip.generateAsync({
+    type: 'blob',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    compression: 'DEFLATE',
+    compressionOptions: { level: 6 }
+  });
+}
+
+function renderResults(items) {
+  const list = document.getElementById('resultList');
+  list.innerHTML = '';
+  items.forEach((item, i) => {
+    const fname = `DJ_${String(i+1).padStart(2,'0')}_${item.nombre.replace(/\s+/g,'_')}.docx`;
+    const url = URL.createObjectURL(item.blob);
+    const div = document.createElement('div');
+    div.className = 'result-item';
+    div.innerHTML = `
+      <div>
+        <div class="result-name">${item.nombre}</div>
+        <div class="result-rut">${item.rut}</div>
+      </div>
+      <a class="result-dl success" href="${url}" download="${fname}">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path d="M12 2v10m0 0l-3-3m3 3l3-3M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Descargar
+      </a>
+    `;
+    list.appendChild(div);
+  });
+  const n = items.length;
+  document.getElementById('zipTitle').textContent = `${n} declaración${n>1?'es':''} lista${n>1?'s':''}`;
+  document.getElementById('zipSubtitle').textContent = `Descargar todos como un solo archivo ZIP`;
+  document.getElementById('zipRow').style.display = 'flex';
+}
+
+async function downloadZip() {
+  const zip = new JSZip();
+  state.generatedBlobs.forEach((item, i) => {
+    const fname = `DJ_${String(i+1).padStart(2,'0')}_${item.nombre.replace(/\s+/g,'_')}.docx`;
+    zip.file(fname, item.blob);
+  });
+  const content = await zip.generateAsync({ type: 'blob' });
+  const url = URL.createObjectURL(content);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Declaraciones_Juradas_${new Date().toISOString().slice(0,10)}.zip`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── HELPERS ──
+function showCard(n) {
+  document.getElementById('card' + n).classList.add('visible');
+  document.getElementById('card' + n).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function stepDone(n) {
+  const sc = document.getElementById('sc' + n);
+  const sl = document.getElementById('sl' + n);
+  sc.className = 'step-circle done'; sc.textContent = '✓';
+  sl.className = 'step-label done';
+  if (document.getElementById('conn' + n)) document.getElementById('conn' + n).classList.add('done');
+  const cn = document.getElementById('cn' + n);
+  if (cn) { cn.className = 'card-number done'; cn.textContent = '✓'; }
+}
+
+function stepActive(n) {
+  document.getElementById('sc' + n).className = 'step-circle active';
+  document.getElementById('sl' + n).className = 'step-label active';
+}
+
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'dropzone-status' + (type ? ' ' + type : '');
+}
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'alert' + (type ? ' ' + type : '');
+  el.style.display = msg ? 'block' : 'none';
+}
+
+// ── VISOR DE DOCUMENTOS ──
+let previewIdx = 0;
+
+async function renderPreview(idx) {
+  const items = state.generatedBlobs;
+  if (!items || !items.length) return;
+
+  previewIdx = idx;
+  const item = items[idx];
+
+  // Update toolbar
+  document.getElementById('previewName').textContent = item.nombre;
+  document.getElementById('previewCounter').textContent = `Documento ${idx + 1} de ${items.length}`;
+  document.getElementById('prevBtn').disabled = (idx === 0);
+  document.getElementById('nextBtn').disabled = (idx === items.length - 1);
+
+  // Show loading
+  const loading = document.getElementById('previewLoading');
+  const content = document.getElementById('previewContent');
+  loading.classList.remove('hidden');
+  content.innerHTML = '';
+
+  try {
+    const buffer = await item.blob.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer: buffer });
+    content.innerHTML = result.value || '<p style="color:#888;text-align:center">Sin contenido para mostrar.</p>';
+  } catch(e) {
+    content.innerHTML = `<p style="color:var(--rojo)">Error al generar la vista previa: ${e.message}</p>`;
+  } finally {
+    loading.classList.add('hidden');
+  }
+}
+
+function previewNav(dir) {
+  const newIdx = previewIdx + dir;
+  if (newIdx >= 0 && newIdx < state.generatedBlobs.length) {
+    renderPreview(newIdx);
+    document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+// Keyboard navigation for preview
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('card4').classList.contains('visible')) return;
+  if (document.getElementById('helpModal').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft')  previewNav(-1);
+  if (e.key === 'ArrowRight') previewNav(1);
+});
+function openHelp() { document.getElementById('helpModal').classList.add('open'); }
+function closeHelp() { document.getElementById('helpModal').classList.remove('open'); }
+function closeHelpOutside(e) { if (e.target === document.getElementById('helpModal')) closeHelp(); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeHelp(); closeResetConfirm(); } });
+
+// ── REINICIAR ──
+function confirmReset() { document.getElementById('resetConfirm').classList.add('open'); }
+function closeResetConfirm() { document.getElementById('resetConfirm').classList.remove('open'); }
+
+function doReset() {
+  closeResetConfirm();
+
+  // Reset state
+  state = { pdfText: null, templateBuffer: null, courseData: {}, participants: [], generatedBlobs: [] };
+
+  // Hide cards 2-4, show card 1
+  [2,3,4].forEach(n => document.getElementById('card'+n).classList.remove('visible'));
+  document.getElementById('card1').classList.add('visible');
+
+  // Reset step indicators
+  [1,2,3,4].forEach(n => {
+    const sc = document.getElementById('sc'+n);
+    const sl = document.getElementById('sl'+n);
+    sc.className = 'step-circle' + (n===1?' active':'');
+    sc.textContent = n;
+    sl.className = 'step-label' + (n===1?' active':'');
+    const cn = document.getElementById('cn'+n);
+    if (cn) { cn.className = 'card-number'; cn.textContent = n; }
+  });
+  [1,2,3].forEach(n => {
+    const conn = document.getElementById('conn'+n);
+    if (conn) conn.classList.remove('done');
+  });
+
+  // Reset dropzones
+  document.getElementById('dz1').classList.remove('loaded', 'dragover');
+  document.getElementById('dz2').classList.remove('loaded', 'dragover');
+  document.getElementById('pdfInput').value = '';
+  document.getElementById('docxInput').value = '';
+  setStatus('pdfStatus', '');
+  setStatus('docxStatus', '');
+  showAlert('pdfAlert', '');
+  showAlert('docxAlert', '');
+  document.getElementById('pdfLoader').style.display = 'none';
+  document.getElementById('genLoader').style.display = 'none';
+
+  // Reset form
+  ['f_curso','f_sence','f_accion','f_inicio','f_termino'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('partBody').innerHTML = '';
+  document.getElementById('partCount').textContent = '0';
+  document.getElementById('resultList').innerHTML = '';
+  document.getElementById('zipRow').style.display = 'none';
+  document.getElementById('previewSection').classList.remove('visible');
+  document.getElementById('previewContent').innerHTML = '';
+  document.getElementById('previewName').textContent = '—';
+  document.getElementById('previewCounter').textContent = '1 de 1';
+  previewIdx = 0;
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
